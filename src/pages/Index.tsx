@@ -1,12 +1,236 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Search, Globe, Sparkles } from "lucide-react";
+import RobotAnimation from "@/components/RobotAnimation";
+import ScoreDisplay from "@/components/ScoreDisplay";
+import { supabase } from "@/integrations/supabase/client";
+
+interface AnalysisResult {
+  score: number;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  keywords_found: string[];
+}
 
 const Index = () => {
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const { toast } = useToast();
+
+  const handleAnalyze = async () => {
+    if (!websiteUrl.trim() || !searchQuery.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha a URL do site e a pesquisa.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate URL
+    let formattedUrl = websiteUrl.trim();
+    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+      formattedUrl = "https://" + formattedUrl;
+    }
+
+    try {
+      new URL(formattedUrl);
+    } catch {
+      toast({
+        title: "URL inválida",
+        description: "Por favor, insira uma URL válida.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-relevance', {
+        body: { 
+          websiteUrl: formattedUrl, 
+          searchQuery: searchQuery.trim() 
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setResult(data);
+      toast({
+        title: "Análise concluída!",
+        description: "Veja o score de relevância do seu site.",
+      });
+    } catch (error) {
+      console.error("Analysis error:", error);
+      toast({
+        title: "Erro na análise",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar o site.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setWebsiteUrl("");
+    setSearchQuery("");
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+              <Sparkles className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">LLM Score</h1>
+              <p className="text-sm text-muted-foreground">Análise de Relevância para IA</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        {!isAnalyzing && !result && (
+          <div className="space-y-8">
+            {/* Hero Section */}
+            <div className="text-center space-y-4 py-8">
+              <h2 className="text-4xl font-bold tracking-tight">
+                Descubra seu Score de
+                <span className="text-primary"> Relevância LLM</span>
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Analise o quanto seu site está otimizado para ser encontrado e recomendado 
+                por inteligências artificiais como ChatGPT, Claude e Gemini.
+              </p>
+            </div>
+
+            {/* Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Configurar Análise
+                </CardTitle>
+                <CardDescription>
+                  Insira a URL do seu site e a pesquisa que você deseja analisar
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">URL do Site</label>
+                  <Input
+                    placeholder="https://exemplo.com ou https://exemplo.com/servicos"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    className="h-12"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Pode ser a página inicial ou uma página específica (blog, serviços, etc.)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Pesquisa ou Problema</label>
+                  <Textarea
+                    placeholder="Ex: 'Preciso de uma agência de marketing digital em São Paulo' ou 'Melhor software para gestão de projetos'"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Digite uma pesquisa como um usuário faria em uma IA
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={handleAnalyze} 
+                  className="w-full h-12 text-lg"
+                  size="lg"
+                >
+                  <Search className="mr-2 h-5 w-5" />
+                  Analisar Relevância
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* How it works */}
+            <div className="grid md:grid-cols-3 gap-4 pt-8">
+              {[
+                {
+                  step: "1",
+                  title: "Insira sua URL",
+                  description: "Cole a URL do seu site ou página específica"
+                },
+                {
+                  step: "2",
+                  title: "Defina a pesquisa",
+                  description: "Digite como um usuário pesquisaria na IA"
+                },
+                {
+                  step: "3",
+                  title: "Receba o Score",
+                  description: "Veja a probabilidade de ser recomendado"
+                }
+              ].map((item) => (
+                <div key={item.step} className="text-center p-6 rounded-lg border border-border bg-card">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center mx-auto mb-3">
+                    {item.step}
+                  </div>
+                  <h3 className="font-medium mb-1">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isAnalyzing && <RobotAnimation />}
+
+        {result && !isAnalyzing && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Resultado da Análise</h2>
+                <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">
+                  {websiteUrl}
+                </p>
+              </div>
+              <Button variant="outline" onClick={handleReset}>
+                Nova Análise
+              </Button>
+            </div>
+            <ScoreDisplay result={result} />
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border mt-auto">
+        <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
+          LLM Score - Análise de Relevância para Inteligências Artificiais
+        </div>
+      </footer>
     </div>
   );
 };
