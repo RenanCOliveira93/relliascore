@@ -7,47 +7,31 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, Globe, Sparkles } from "lucide-react";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
+import AnalysisModeTabs from "@/components/AnalysisModeTabs";
 import { supabase } from "@/integrations/supabase/client";
-
-interface AnalysisResult {
-  score: number;
-  summary: string;
-  strengths: string[];
-  improvements: string[];
-  keywords_found: string[];
-}
+import type { AnalysisResult, AnalysisMode } from "@/types/analysis";
 
 const Index = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [mode, setMode] = useState<AnalysisMode>("business");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const { toast } = useToast();
 
   const handleAnalyze = async () => {
     if (!websiteUrl.trim() || !searchQuery.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha a URL do site e a pesquisa.",
-        variant: "destructive",
-      });
+      toast({ title: "Campos obrigatórios", description: "Por favor, preencha a URL do site e a pesquisa.", variant: "destructive" });
       return;
     }
 
-    // Validate URL
     let formattedUrl = websiteUrl.trim();
     if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
       formattedUrl = "https://" + formattedUrl;
     }
 
-    try {
-      new URL(formattedUrl);
-    } catch {
-      toast({
-        title: "URL inválida",
-        description: "Por favor, insira uma URL válida.",
-        variant: "destructive",
-      });
+    try { new URL(formattedUrl); } catch {
+      toast({ title: "URL inválida", description: "Por favor, insira uma URL válida.", variant: "destructive" });
       return;
     }
 
@@ -56,32 +40,17 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-        body: { 
-          websiteUrl: formattedUrl, 
-          searchQuery: searchQuery.trim() 
-        }
+        body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode }
       });
 
-      if (error) {
-        throw error;
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
       setResult(data);
-      toast({
-        title: "Análise concluída!",
-        description: "Veja o score de relevância do seu site.",
-      });
+      toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu site." });
     } catch (error) {
       console.error("Analysis error:", error);
-      toast({
-        title: "Erro na análise",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar o site.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro na análise", description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar o site.", variant: "destructive" });
     } finally {
       setIsAnalyzing(false);
     }
@@ -95,7 +64,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
@@ -104,7 +72,7 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-xl font-semibold">LLM Score</h1>
-              <p className="text-sm text-muted-foreground">Análise de Relevância para IA</p>
+              <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
             </div>
           </div>
         </div>
@@ -113,30 +81,28 @@ const Index = () => {
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         {!isAnalyzing && !result && (
           <div className="space-y-8">
-            {/* Hero Section */}
             <div className="text-center space-y-4 py-8">
               <h2 className="text-4xl font-bold tracking-tight">
                 Descubra seu Score de
                 <span className="text-primary"> Relevância LLM</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Analise o quanto seu site está otimizado para ser encontrado e recomendado 
-                por inteligências artificiais como ChatGPT, Claude e Gemini.
+                Diagnóstico completo com sub-scores, plano de ação, análise de compatibilidade
+                e palavras-chave para otimizar seu conteúdo para IAs.
               </p>
             </div>
 
-            {/* Form */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="h-5 w-5" />
                   Configurar Análise
                 </CardTitle>
-                <CardDescription>
-                  Insira a URL do seu site e a pesquisa que você deseja analisar
-                </CardDescription>
+                <CardDescription>Escolha o perfil, insira a URL e a pesquisa</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <AnalysisModeTabs mode={mode} onModeChange={setMode} />
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">URL do Site</label>
                   <Input
@@ -145,53 +111,35 @@ const Index = () => {
                     onChange={(e) => setWebsiteUrl(e.target.value)}
                     className="h-12"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Pode ser a página inicial ou uma página específica (blog, serviços, etc.)
-                  </p>
+                  <p className="text-xs text-muted-foreground">Pode ser a página inicial ou uma página específica</p>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Pesquisa ou Problema</label>
                   <Textarea
-                    placeholder="Ex: 'Preciso de uma agência de marketing digital em São Paulo' ou 'Melhor software para gestão de projetos'"
+                    placeholder={mode === "influencer"
+                      ? "Ex: 'Quem é referência em marketing digital no Brasil?'"
+                      : "Ex: 'Melhor software para gestão de projetos'"
+                    }
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     rows={3}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Digite uma pesquisa como um usuário faria em uma IA
-                  </p>
+                  <p className="text-xs text-muted-foreground">Digite como um usuário pesquisaria em uma IA</p>
                 </div>
 
-                <Button 
-                  onClick={handleAnalyze} 
-                  className="w-full h-12 text-lg"
-                  size="lg"
-                >
+                <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg">
                   <Search className="mr-2 h-5 w-5" />
                   Analisar Relevância
                 </Button>
               </CardContent>
             </Card>
 
-            {/* How it works */}
             <div className="grid md:grid-cols-3 gap-4 pt-8">
               {[
-                {
-                  step: "1",
-                  title: "Insira sua URL",
-                  description: "Cole a URL do seu site ou página específica"
-                },
-                {
-                  step: "2",
-                  title: "Defina a pesquisa",
-                  description: "Digite como um usuário pesquisaria na IA"
-                },
-                {
-                  step: "3",
-                  title: "Receba o Score",
-                  description: "Veja a probabilidade de ser recomendado"
-                }
+                { step: "1", title: "Escolha o perfil", description: "Influencer ou Empresa" },
+                { step: "2", title: "Insira URL e pesquisa", description: "Configure sua análise" },
+                { step: "3", title: "Receba o diagnóstico", description: "Score, plano de ação e mais" },
               ].map((item) => (
                 <div key={item.step} className="text-center p-6 rounded-lg border border-border bg-card">
                   <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center mx-auto mb-3">
@@ -212,23 +160,18 @@ const Index = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">Resultado da Análise</h2>
-                <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">
-                  {websiteUrl}
-                </p>
+                <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{websiteUrl}</p>
               </div>
-              <Button variant="outline" onClick={handleReset}>
-                Nova Análise
-              </Button>
+              <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
             </div>
             <ScoreDisplay result={result} />
           </div>
         )}
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border mt-auto">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          LLM Score - Análise de Relevância para Inteligências Artificiais
+          LLM Score - Diagnóstico Completo de Relevância para Inteligências Artificiais
         </div>
       </footer>
     </div>
