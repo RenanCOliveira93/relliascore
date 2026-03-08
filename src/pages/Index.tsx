@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Globe, Sparkles } from "lucide-react";
+import { Search, Globe, Sparkles, FileDown } from "lucide-react";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
+import VideoBackground from "@/components/VideoBackground";
+import LeadCaptureDialog from "@/components/LeadCaptureDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, AnalysisMode } from "@/types/analysis";
 
@@ -17,6 +19,7 @@ const Index = () => {
   const [mode, setMode] = useState<AnalysisMode>("business");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [showLeadDialog, setShowLeadDialog] = useState(false);
   const { toast } = useToast();
 
   const handleAnalyze = async () => {
@@ -63,117 +66,143 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold">LLM Score</h1>
-              <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen relative">
+      <VideoBackground />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {!isAnalyzing && !result && (
-          <div className="space-y-8">
-            <div className="text-center space-y-4 py-8">
-              <h2 className="text-4xl font-bold tracking-tight">
-                Descubra seu Score de
-                <span className="text-primary"> Relevância LLM</span>
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Diagnóstico completo com sub-scores, plano de ação, análise de compatibilidade
-                e palavras-chave para otimizar seu conteúdo para IAs.
-              </p>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Configurar Análise
-                </CardTitle>
-                <CardDescription>Escolha o perfil, insira a URL e a pesquisa</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <AnalysisModeTabs mode={mode} onModeChange={setMode} />
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">URL do Site</label>
-                  <Input
-                    placeholder="https://exemplo.com ou https://exemplo.com/servicos"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    className="h-12"
-                  />
-                  <p className="text-xs text-muted-foreground">Pode ser a página inicial ou uma página específica</p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Pesquisa ou Problema</label>
-                  <Textarea
-                    placeholder={mode === "influencer"
-                      ? "Ex: 'Quem é referência em marketing digital no Brasil?'"
-                      : "Ex: 'Melhor software para gestão de projetos'"
-                    }
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    rows={3}
-                  />
-                  <p className="text-xs text-muted-foreground">Digite como um usuário pesquisaria em uma IA</p>
-                </div>
-
-                <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg">
-                  <Search className="mr-2 h-5 w-5" />
-                  Analisar Relevância
-                </Button>
-              </CardContent>
-            </Card>
-
-            <div className="grid md:grid-cols-3 gap-4 pt-8">
-              {[
-                { step: "1", title: "Escolha o perfil", description: "Influencer ou Empresa" },
-                { step: "2", title: "Insira URL e pesquisa", description: "Configure sua análise" },
-                { step: "3", title: "Receba o diagnóstico", description: "Score, plano de ação e mais" },
-              ].map((item) => (
-                <div key={item.step} className="text-center p-6 rounded-lg border border-border bg-card">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center mx-auto mb-3">
-                    {item.step}
-                  </div>
-                  <h3 className="font-medium mb-1">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {isAnalyzing && <RobotAnimation />}
-
-        {result && !isAnalyzing && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Resultado da Análise</h2>
-                <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{websiteUrl}</p>
+      <div className="relative z-10">
+        <header className="border-b border-border/50 backdrop-blur-md bg-background/30">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center backdrop-blur-sm">
+                <Sparkles className="h-6 w-6 text-primary" />
               </div>
-              <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
+              <div>
+                <h1 className="text-xl font-semibold">LLM Score</h1>
+                <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
+              </div>
             </div>
-            <ScoreDisplay result={result} />
           </div>
-        )}
-      </main>
+        </header>
 
-      <footer className="border-t border-border mt-auto">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          LLM Score - Diagnóstico Completo de Relevância para Inteligências Artificiais
-        </div>
-      </footer>
+        <main className="container mx-auto px-4 py-8 max-w-4xl">
+          {!isAnalyzing && !result && (
+            <div className="space-y-8">
+              <div className="text-center space-y-4 py-8">
+                <h2 className="text-4xl font-bold tracking-tight">
+                  Descubra seu Score de
+                  <span className="text-primary"> Relevância LLM</span>
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  Diagnóstico completo com sub-scores, plano de ação, análise de compatibilidade
+                  e palavras-chave para otimizar seu conteúdo para IAs.
+                </p>
+              </div>
+
+              <Card className="backdrop-blur-md bg-card/80 border-border/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Configurar Análise
+                  </CardTitle>
+                  <CardDescription>Escolha o perfil, insira a URL e a pesquisa</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <AnalysisModeTabs mode={mode} onModeChange={setMode} />
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">URL do Site</label>
+                    <Input
+                      placeholder="https://exemplo.com ou https://exemplo.com/servicos"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      className="h-12 bg-input/50 backdrop-blur-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">Pode ser a página inicial ou uma página específica</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Pesquisa ou Problema</label>
+                    <Textarea
+                      placeholder={mode === "influencer"
+                        ? "Ex: 'Quem é referência em marketing digital no Brasil?'"
+                        : "Ex: 'Melhor software para gestão de projetos'"
+                      }
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      rows={3}
+                      className="bg-input/50 backdrop-blur-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">Digite como um usuário pesquisaria em uma IA</p>
+                  </div>
+
+                  <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg">
+                    <Search className="mr-2 h-5 w-5" />
+                    Analisar Relevância
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div className="grid md:grid-cols-3 gap-4 pt-8">
+                {[
+                  { step: "1", title: "Escolha o perfil", description: "Influencer ou Empresa" },
+                  { step: "2", title: "Insira URL e pesquisa", description: "Configure sua análise" },
+                  { step: "3", title: "Receba o diagnóstico", description: "Score, plano de ação e mais" },
+                ].map((item) => (
+                  <div key={item.step} className="text-center p-6 rounded-lg border border-border/50 bg-card/60 backdrop-blur-md">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center mx-auto mb-3">
+                      {item.step}
+                    </div>
+                    <h3 className="font-medium mb-1">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isAnalyzing && <RobotAnimation />}
+
+          {result && !isAnalyzing && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h2 className="text-2xl font-bold">Resultado da Análise</h2>
+                  <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{websiteUrl}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="default"
+                    onClick={() => setShowLeadDialog(true)}
+                    className="gap-2"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Exportar PDF
+                  </Button>
+                  <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
+                </div>
+              </div>
+              <ScoreDisplay result={result} />
+            </div>
+          )}
+        </main>
+
+        <footer className="border-t border-border/50 mt-auto backdrop-blur-md bg-background/30">
+          <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
+            LLM Score - Diagnóstico Completo de Relevância para Inteligências Artificiais
+          </div>
+        </footer>
+      </div>
+
+      {result && (
+        <LeadCaptureDialog
+          open={showLeadDialog}
+          onOpenChange={setShowLeadDialog}
+          result={result}
+          websiteUrl={websiteUrl}
+          searchQuery={searchQuery}
+          mode={mode}
+        />
+      )}
     </div>
   );
 };
