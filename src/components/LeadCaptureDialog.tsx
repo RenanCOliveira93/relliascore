@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileDown, Loader2 } from "lucide-react";
 import type { AnalysisResult } from "@/types/analysis";
+import { generateAnalysisPdf } from "@/lib/generatePdf";
 
 interface LeadCaptureDialogProps {
   open: boolean;
