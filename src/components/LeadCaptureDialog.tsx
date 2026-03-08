@@ -76,9 +76,12 @@ const LeadCaptureDialog = ({
 
       if (error) throw error;
 
+      // Generate and download PDF
+      generateAnalysisPdf(result, websiteUrl, searchQuery, mode);
+
       toast({
-        title: "Relatório solicitado! 📧",
-        description: "Em breve você receberá o PDF no seu email.",
+        title: "PDF gerado com sucesso! 📄",
+        description: "O download do relatório começou automaticamente.",
       });
 
       onOpenChange(false);
