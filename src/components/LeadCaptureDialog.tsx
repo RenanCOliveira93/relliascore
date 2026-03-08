@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { FileDown, Loader2 } from "lucide-react";
 import type { AnalysisResult } from "@/types/analysis";
+import { generateAnalysisPdf } from "@/lib/generatePdf";
 
 interface LeadCaptureDialogProps {
   open: boolean;
@@ -75,9 +76,12 @@ const LeadCaptureDialog = ({
 
       if (error) throw error;
 
+      // Generate and download PDF
+      generateAnalysisPdf(result, websiteUrl, searchQuery, mode);
+
       toast({
-        title: "Relatório solicitado! 📧",
-        description: "Em breve você receberá o PDF no seu email.",
+        title: "PDF gerado com sucesso! 📄",
+        description: "O download do relatório começou automaticamente.",
       });
 
       onOpenChange(false);
@@ -153,7 +157,7 @@ const LeadCaptureDialog = ({
             ) : (
               <FileDown className="mr-2 h-4 w-4" />
             )}
-            {isSubmitting ? "Enviando..." : "Receber PDF por Email"}
+            {isSubmitting ? "Gerando PDF..." : "Baixar Relatório PDF"}
           </Button>
         </form>
       </DialogContent>
