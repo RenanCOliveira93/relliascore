@@ -157,7 +157,7 @@ const LeadCaptureDialog = ({
             ) : (
               <FileDown className="mr-2 h-4 w-4" />
             )}
-            {isSubmitting ? "Enviando..." : "Receber PDF por Email"}
+            {isSubmitting ? "Gerando PDF..." : "Baixar Relatório PDF"}
           </Button>
         </form>
       </DialogContent>
