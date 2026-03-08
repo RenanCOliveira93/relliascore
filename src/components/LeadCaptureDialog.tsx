@@ -62,7 +62,7 @@ const LeadCaptureDialog = ({
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from("leads").insert({
+      const { error } = await supabase.from("leads").insert([{
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim() || null,
@@ -71,7 +71,7 @@ const LeadCaptureDialog = ({
         analysis_mode: mode,
         score: result.score,
         analysis_result: result as unknown as Record<string, unknown>,
-      });
+      }]);
 
       if (error) throw error;
 
