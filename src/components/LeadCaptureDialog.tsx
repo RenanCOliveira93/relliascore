@@ -70,7 +70,7 @@ const LeadCaptureDialog = ({
         search_query: searchQuery,
         analysis_mode: mode,
         score: result.score,
-        analysis_result: result as unknown as Record<string, unknown>,
+        analysis_result: JSON.parse(JSON.stringify(result)),
       }]);
 
       if (error) throw error;
