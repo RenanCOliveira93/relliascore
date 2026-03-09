@@ -11,63 +11,90 @@ serve(async (req) => {
   }
 
   try {
-    const { websiteUrl, searchQuery, mode = "business" } = await req.json();
-    
-    if (!websiteUrl || !searchQuery) {
+    const { websiteUrl, searchQuery, mode = "business", inputType = "webpage", content } = await req.json();
+
+    if (inputType === "webpage" && !websiteUrl) {
       return new Response(
-        JSON.stringify({ error: 'URL do site e consulta de pesquisa são obrigatórios' }),
+        JSON.stringify({ error: 'URL do site é obrigatória para análise de webpage' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Analyzing relevance for URL: ${websiteUrl} with query: ${searchQuery}, mode: ${mode}`);
+    if (inputType === "text" && !content) {
+      return new Response(
+        JSON.stringify({ error: 'Texto é obrigatório para análise de texto' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!searchQuery) {
+      return new Response(
+        JSON.stringify({ error: 'Consulta de pesquisa é obrigatória' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Analyzing relevance - inputType: ${inputType}, mode: ${mode}, query: ${searchQuery}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Fetch website content
-    let websiteContent = "";
-    try {
-      const response = await fetch(websiteUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; LLMScoreAnalyzer/1.0)'
-        }
-      });
-      const html = await response.text();
-      websiteContent = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .substring(0, 15000);
-    } catch (fetchError) {
-      console.error("Error fetching website:", fetchError);
-      websiteContent = `Não foi possível acessar o conteúdo do site ${websiteUrl}. Analisando apenas a URL.`;
+    // Get content based on input type
+    let analysisContent = "";
+    let sourceLabel = "";
+
+    if (inputType === "text") {
+      analysisContent = content.substring(0, 15000);
+      sourceLabel = "Texto fornecido pelo usuário (pré-publicação)";
+    } else {
+      sourceLabel = `URL: ${websiteUrl}`;
+      try {
+        const response = await fetch(websiteUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LLMScoreAnalyzer/1.0)' }
+        });
+        const html = await response.text();
+        analysisContent = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .substring(0, 15000);
+      } catch (fetchError) {
+        console.error("Error fetching website:", fetchError);
+        analysisContent = `Não foi possível acessar o conteúdo do site ${websiteUrl}. Analisando apenas a URL.`;
+      }
     }
 
     const modeContext = mode === "influencer"
       ? `O contexto é de um INFLUENCER / MARCA PESSOAL. Foque em: autoridade pessoal, presença digital, tom de voz autêntico, engajamento percebido, conexão com a audiência, storytelling, prova social e posicionamento como referência no nicho.`
       : `O contexto é de uma EMPRESA / EMPREENDIMENTO. Foque em: SEO técnico, autoridade de domínio, proposta de valor clara, conversão, competitividade no mercado, credibilidade institucional e otimização para buscas comerciais.`;
 
+    const textContext = inputType === "text"
+      ? `IMPORTANTE: Este texto ainda NÃO foi publicado. O usuário está analisando o conteúdo ANTES de publicar. Analise como se fosse ser postado. Além da análise padrão, forneça um exemplo completo de como seria um texto ideal (score próximo a 100%) baseado no conteúdo fornecido. O exemplo ideal deve ser um texto pronto para publicação, mantendo a essência do original mas otimizado para máxima relevância.`
+      : `Além da análise padrão, forneça um exemplo de conteúdo ideal (score próximo a 100%) que a página deveria ter para ser perfeitamente relevante para a pesquisa.`;
+
     const systemPrompt = `Você é um especialista em SEO, GEO (Generative Engine Optimization) e análise de conteúdo digital. ${modeContext}
 
-Sua tarefa é fazer uma análise COMPLETA e DETALHADA do conteúdo de um site em relação a uma pesquisa específica que um usuário faria em um LLM/IA.`;
+${textContext}
 
-    const userPrompt = `Analise o seguinte conteúdo do site e determine sua relevância para a pesquisa fornecida.
+Sua tarefa é fazer uma análise COMPLETA e DETALHADA do conteúdo em relação a uma pesquisa específica que um usuário faria em um LLM/IA.`;
 
-URL do Site: ${websiteUrl}
+    const userPrompt = `Analise o seguinte conteúdo e determine sua relevância para a pesquisa fornecida.
+
+Fonte: ${sourceLabel}
+Tipo de Entrada: ${inputType === "text" ? "Texto pré-publicação" : "Webpage publicada"}
 Modo de Análise: ${mode === "influencer" ? "Influencer / Marca Pessoal" : "Empresa / Empreendimento"}
 
-Conteúdo do Site:
-${websiteContent}
+Conteúdo:
+${analysisContent}
 
 Pesquisa/Problema do Usuário:
 "${searchQuery}"
 
-Faça uma análise completa usando a função fornecida.`;
+Faça uma análise completa usando a função fornecida. Inclua obrigatoriamente o campo ideal_example com um exemplo detalhado de conteúdo otimizado.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -108,8 +135,8 @@ Faça uma análise completa usando a função fornecida.`;
                   compatibility_diagnostic: {
                     type: "object",
                     properties: {
-                      conteudo_atual: { type: "string", description: "Resumo do que a página comunica atualmente" },
-                      conteudo_ideal: { type: "string", description: "O que a página deveria comunicar para a pesquisa" },
+                      conteudo_atual: { type: "string", description: "Resumo do que o conteúdo comunica atualmente" },
+                      conteudo_ideal: { type: "string", description: "O que o conteúdo deveria comunicar para a pesquisa" },
                       gap_analysis: { type: "array", items: { type: "string" }, description: "Lista de lacunas entre atual e ideal" },
                       compatibility_percentage: { type: "number" }
                     },
@@ -136,9 +163,10 @@ Faça uma análise completa usando a função fornecida.`;
                       suggested: { type: "array", items: { type: "string" } }
                     },
                     required: ["found", "missing", "suggested"]
-                  }
+                  },
+                  ideal_example: { type: "string", description: "Exemplo completo de conteúdo otimizado que alcançaria score próximo a 100%. Deve ser um texto detalhado e pronto para uso, baseado no conteúdo analisado." }
                 },
-                required: ["score", "summary", "strengths", "improvements", "sub_scores", "compatibility_diagnostic", "action_plan", "keywords_analysis"],
+                required: ["score", "summary", "strengths", "improvements", "sub_scores", "compatibility_diagnostic", "action_plan", "keywords_analysis", "ideal_example"],
                 additionalProperties: false
               }
             }
@@ -169,7 +197,6 @@ Faça uma análise completa usando a função fornecida.`;
     const aiResponse = await response.json();
     console.log("AI Response:", JSON.stringify(aiResponse));
 
-    // Extract from tool call
     let analysisResult;
     try {
       const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
@@ -178,10 +205,9 @@ Faça uma análise completa usando a função fornecida.`;
           ? JSON.parse(toolCall.function.arguments)
           : toolCall.function.arguments;
       } else {
-        // Fallback: try content
-        const content = aiResponse.choices?.[0]?.message?.content;
-        if (content) {
-          const clean = content.replace(/```json\n?|\n?```/g, '').trim();
+        const contentStr = aiResponse.choices?.[0]?.message?.content;
+        if (contentStr) {
+          const clean = contentStr.replace(/```json\n?|\n?```/g, '').trim();
           analysisResult = JSON.parse(clean);
         }
       }
@@ -198,7 +224,8 @@ Faça uma análise completa usando a função fornecida.`;
         sub_scores: { relevancia_tematica: 50, qualidade_conteudo: 50, autoridade_percebida: 50, otimizacao_llm: 50, clareza_proposta_valor: 50 },
         compatibility_diagnostic: { conteudo_atual: "Não foi possível determinar.", conteudo_ideal: "Não foi possível determinar.", gap_analysis: [], compatibility_percentage: 50 },
         action_plan: [],
-        keywords_analysis: { found: [], missing: [], suggested: [] }
+        keywords_analysis: { found: [], missing: [], suggested: [] },
+        ideal_example: ""
       };
     }
 
