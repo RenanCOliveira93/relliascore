@@ -114,6 +114,27 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
           {result.keywords_analysis && <KeywordAnalysis keywords={result.keywords_analysis} />}
         </TabsContent>
 
+        {result.ideal_example && (
+          <TabsContent value="ideal">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Exemplo Ideal
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Exemplo de conteúdo otimizado que alcançaria um score próximo a 100%:
+                </p>
+                <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{result.ideal_example}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
         <TabsContent value="details">
           <div className="grid md:grid-cols-2 gap-4">
             <Card>

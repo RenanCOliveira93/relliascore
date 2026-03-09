@@ -8,54 +8,80 @@ import { Search, Globe, Sparkles, FileDown } from "lucide-react";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
+import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
 import LeadCaptureDialog from "@/components/LeadCaptureDialog";
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResult, AnalysisMode } from "@/types/analysis";
+import type { AnalysisResult, AnalysisMode, InputType } from "@/types/analysis";
 
 const Index = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [textContent, setTextContent] = useState("");
   const [mode, setMode] = useState<AnalysisMode>("business");
+  const [inputType, setInputType] = useState<InputType>("webpage");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const { toast } = useToast();
 
   const handleAnalyze = async () => {
-    if (!websiteUrl.trim() || !searchQuery.trim()) {
-      toast({ title: "Campos obrigatórios", description: "Por favor, preencha a URL do site e a pesquisa.", variant: "destructive" });
-      return;
-    }
+    if (inputType === "webpage") {
+      if (!websiteUrl.trim() || !searchQuery.trim()) {
+        toast({ title: "Campos obrigatórios", description: "Por favor, preencha a URL do site e a pesquisa.", variant: "destructive" });
+        return;
+      }
 
-    let formattedUrl = websiteUrl.trim();
-    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-      formattedUrl = "https://" + formattedUrl;
-    }
+      let formattedUrl = websiteUrl.trim();
+      if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+        formattedUrl = "https://" + formattedUrl;
+      }
 
-    try { new URL(formattedUrl); } catch {
-      toast({ title: "URL inválida", description: "Por favor, insira uma URL válida.", variant: "destructive" });
-      return;
-    }
+      try { new URL(formattedUrl); } catch {
+        toast({ title: "URL inválida", description: "Por favor, insira uma URL válida.", variant: "destructive" });
+        return;
+      }
 
-    setIsAnalyzing(true);
-    setResult(null);
+      setIsAnalyzing(true);
+      setResult(null);
 
-    try {
-      const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-        body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode }
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('analyze-relevance', {
+          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage" }
+        });
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+        setResult(data);
+        toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu site." });
+      } catch (error) {
+        console.error("Analysis error:", error);
+        toast({ title: "Erro na análise", description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar o site.", variant: "destructive" });
+      } finally {
+        setIsAnalyzing(false);
+      }
+    } else {
+      if (!textContent.trim() || !searchQuery.trim()) {
+        toast({ title: "Campos obrigatórios", description: "Por favor, preencha o texto e a pesquisa.", variant: "destructive" });
+        return;
+      }
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      setIsAnalyzing(true);
+      setResult(null);
 
-      setResult(data);
-      toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu site." });
-    } catch (error) {
-      console.error("Analysis error:", error);
-      toast({ title: "Erro na análise", description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar o site.", variant: "destructive" });
-    } finally {
-      setIsAnalyzing(false);
+      try {
+        const { data, error } = await supabase.functions.invoke('analyze-relevance', {
+          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text" }
+        });
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+        setResult(data);
+        toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu texto." });
+      } catch (error) {
+        console.error("Analysis error:", error);
+        toast({ title: "Erro na análise", description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar o texto.", variant: "destructive" });
+      } finally {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -63,7 +89,10 @@ const Index = () => {
     setResult(null);
     setWebsiteUrl("");
     setSearchQuery("");
+    setTextContent("");
   };
+
+  const displaySource = inputType === "webpage" ? websiteUrl : "Texto fornecido";
 
   return (
     <div className="min-h-screen relative">
@@ -104,21 +133,36 @@ const Index = () => {
                     <Globe className="h-5 w-5" />
                     Configurar Análise
                   </CardTitle>
-                  <CardDescription>Escolha o perfil, insira a URL e a pesquisa</CardDescription>
+                  <CardDescription>Escolha o perfil, a fonte, e configure sua análise</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <AnalysisModeTabs mode={mode} onModeChange={setMode} />
+                  <InputTypeSelector inputType={inputType} onInputTypeChange={setInputType} />
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">URL do Site</label>
-                    <Input
-                      placeholder="https://exemplo.com ou https://exemplo.com/servicos"
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      className="h-12 bg-input/50 backdrop-blur-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">Pode ser a página inicial ou uma página específica</p>
-                  </div>
+                  {inputType === "webpage" ? (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">URL do Site</label>
+                      <Input
+                        placeholder="https://exemplo.com ou https://exemplo.com/servicos"
+                        value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        className="h-12 bg-input/50 backdrop-blur-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">Pode ser a página inicial ou uma página específica</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Texto para Análise</label>
+                      <Textarea
+                        placeholder="Cole aqui o texto que pretende publicar..."
+                        value={textContent}
+                        onChange={(e) => setTextContent(e.target.value)}
+                        rows={8}
+                        className="bg-input/50 backdrop-blur-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">Cole o conteúdo que pretende publicar para receber sugestões antes da publicação</p>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Pesquisa ou Problema</label>
@@ -145,7 +189,7 @@ const Index = () => {
               <div className="grid md:grid-cols-3 gap-4 pt-8">
                 {[
                   { step: "1", title: "Escolha o perfil", description: "Influencer ou Empresa" },
-                  { step: "2", title: "Insira URL e pesquisa", description: "Configure sua análise" },
+                  { step: "2", title: "Insira conteúdo e pesquisa", description: "URL ou texto + consulta" },
                   { step: "3", title: "Receba o diagnóstico", description: "Score, plano de ação e mais" },
                 ].map((item) => (
                   <div key={item.step} className="text-center p-6 rounded-lg border border-border/50 bg-card/60 backdrop-blur-md">
@@ -167,7 +211,7 @@ const Index = () => {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <h2 className="text-2xl font-bold">Resultado da Análise</h2>
-                  <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{websiteUrl}</p>
+                  <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{displaySource}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -198,7 +242,7 @@ const Index = () => {
           open={showLeadDialog}
           onOpenChange={setShowLeadDialog}
           result={result}
-          websiteUrl={websiteUrl}
+          websiteUrl={displaySource}
           searchQuery={searchQuery}
           mode={mode}
         />
