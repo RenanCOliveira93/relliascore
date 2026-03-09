@@ -81,11 +81,14 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
 
       {/* Tabbed Results */}
       <Tabs defaultValue="scores" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
+        <TabsList className={`grid w-full ${result.ideal_example ? 'grid-cols-6' : 'grid-cols-5'} h-auto`}>
           <TabsTrigger value="scores" className="text-xs sm:text-sm py-2">Scores</TabsTrigger>
           <TabsTrigger value="diagnostic" className="text-xs sm:text-sm py-2">Diagnóstico</TabsTrigger>
           <TabsTrigger value="action" className="text-xs sm:text-sm py-2">Plano</TabsTrigger>
           <TabsTrigger value="keywords" className="text-xs sm:text-sm py-2">Keywords</TabsTrigger>
+          {result.ideal_example && (
+            <TabsTrigger value="ideal" className="text-xs sm:text-sm py-2">Ideal</TabsTrigger>
+          )}
           <TabsTrigger value="details" className="text-xs sm:text-sm py-2">Detalhes</TabsTrigger>
         </TabsList>
 
