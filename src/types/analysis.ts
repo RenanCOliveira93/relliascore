@@ -1,4 +1,5 @@
 export type AnalysisMode = "influencer" | "business";
+export type InputType = "webpage" | "text";
 
 export interface SubScores {
   relevancia_tematica: number;
@@ -37,4 +38,5 @@ export interface AnalysisResult {
   compatibility_diagnostic: CompatibilityDiagnostic;
   action_plan: ActionPlanItem[];
   keywords_analysis: KeywordsAnalysis;
+  ideal_example?: string;
 }

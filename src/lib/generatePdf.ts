@@ -437,6 +437,22 @@ export function generateAnalysisPdf(
     y += 4;
   }
 
+  // ====== EXEMPLO IDEAL ======
+  if (result.ideal_example) {
+    y = addPageIfNeeded(doc, y, 20);
+    y = drawSectionTitle(doc, "Exemplo Ideal de Conteúdo", y, margin, COLORS.primary);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(...COLORS.muted);
+    y = drawWrappedText(doc, "Exemplo de conteúdo otimizado que alcançaria um score próximo a 100%:", margin, y, contentWidth);
+    y += 3;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...COLORS.dark);
+    y = drawWrappedText(doc, result.ideal_example, margin + 3, y, contentWidth - 5);
+    y += 6;
+  }
+
   // ====== FOOTER ======
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {

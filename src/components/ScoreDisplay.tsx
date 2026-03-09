@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, Lightbulb } from "lucide-react";
+import { CheckCircle, Lightbulb, Sparkles } from "lucide-react";
 import SubScoresRadar from "./SubScoresRadar";
 import CompatibilityDiagnostic from "./CompatibilityDiagnostic";
 import ActionPlan from "./ActionPlan";
@@ -81,11 +81,14 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
 
       {/* Tabbed Results */}
       <Tabs defaultValue="scores" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
+        <TabsList className={`grid w-full ${result.ideal_example ? 'grid-cols-6' : 'grid-cols-5'} h-auto`}>
           <TabsTrigger value="scores" className="text-xs sm:text-sm py-2">Scores</TabsTrigger>
           <TabsTrigger value="diagnostic" className="text-xs sm:text-sm py-2">Diagnóstico</TabsTrigger>
           <TabsTrigger value="action" className="text-xs sm:text-sm py-2">Plano</TabsTrigger>
           <TabsTrigger value="keywords" className="text-xs sm:text-sm py-2">Keywords</TabsTrigger>
+          {result.ideal_example && (
+            <TabsTrigger value="ideal" className="text-xs sm:text-sm py-2">Ideal</TabsTrigger>
+          )}
           <TabsTrigger value="details" className="text-xs sm:text-sm py-2">Detalhes</TabsTrigger>
         </TabsList>
 
@@ -110,6 +113,27 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
         <TabsContent value="keywords">
           {result.keywords_analysis && <KeywordAnalysis keywords={result.keywords_analysis} />}
         </TabsContent>
+
+        {result.ideal_example && (
+          <TabsContent value="ideal">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Exemplo Ideal
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Exemplo de conteúdo otimizado que alcançaria um score próximo a 100%:
+                </p>
+                <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{result.ideal_example}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="details">
           <div className="grid md:grid-cols-2 gap-4">
