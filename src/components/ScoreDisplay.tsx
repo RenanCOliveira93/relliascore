@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, Lightbulb } from "lucide-react";
+import { CheckCircle, Lightbulb, Sparkles } from "lucide-react";
 import SubScoresRadar from "./SubScoresRadar";
 import CompatibilityDiagnostic from "./CompatibilityDiagnostic";
 import ActionPlan from "./ActionPlan";
