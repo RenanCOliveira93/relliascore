@@ -288,7 +288,7 @@ Faça uma análise completa usando a função fornecida. Inclua obrigatoriamente
   } catch (error) {
     console.error("Error in analyze-relevance:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
+      JSON.stringify({ error: 'Erro interno ao processar análise.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
