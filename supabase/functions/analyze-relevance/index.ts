@@ -5,6 +5,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiter (per edge function instance)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 10; // max requests per IP per window
+
+function getRateLimitKey(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.headers.get("cf-connecting-ip")
+    || "unknown";
+}
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+// Periodically clean up expired entries to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now > entry.resetAt) rateLimitMap.delete(key);
+  }
+}, RATE_LIMIT_WINDOW_MS);
+
 function isPrivateUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString);
@@ -22,6 +52,15 @@ function isPrivateUrl(urlString: string): boolean {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting check
+  const clientIp = getRateLimitKey(req);
+  if (isRateLimited(clientIp)) {
+    return new Response(
+      JSON.stringify({ error: 'Limite de requisições excedido. Tente novamente em alguns minutos.' }),
+      { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
