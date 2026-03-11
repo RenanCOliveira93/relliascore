@@ -5,6 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function isPrivateUrl(urlString: string): boolean {
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.toLowerCase();
+    if (['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(hostname)) return true;
+    if (/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(hostname)) return true;
+    if (hostname.endsWith('.local') || hostname.endsWith('.internal')) return true;
+    if (!['http:', 'https:'].includes(url.protocol)) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -12,6 +26,14 @@ serve(async (req) => {
 
   try {
     const { websiteUrl, searchQuery, mode = "business", inputType = "webpage", content } = await req.json();
+
+    // Input validation
+    if (inputType !== "webpage" && inputType !== "text") {
+      return new Response(
+        JSON.stringify({ error: 'Tipo de entrada inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (inputType === "webpage" && !websiteUrl) {
       return new Response(
@@ -27,18 +49,43 @@ serve(async (req) => {
       );
     }
 
-    if (!searchQuery) {
+    if (!searchQuery || typeof searchQuery !== 'string' || searchQuery.length > 2000) {
       return new Response(
-        JSON.stringify({ error: 'Consulta de pesquisa é obrigatória' }),
+        JSON.stringify({ error: 'Consulta de pesquisa inválida (máximo 2000 caracteres)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Analyzing relevance - inputType: ${inputType}, mode: ${mode}, query: ${searchQuery}`);
+    if (inputType === "text" && (typeof content !== 'string' || content.length > 50000)) {
+      return new Response(
+        JSON.stringify({ error: 'Texto inválido (máximo 50000 caracteres)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SSRF protection for webpage mode
+    if (inputType === "webpage") {
+      let formattedUrl = websiteUrl;
+      if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+        formattedUrl = 'https://' + formattedUrl;
+      }
+      if (isPrivateUrl(formattedUrl)) {
+        return new Response(
+          JSON.stringify({ error: 'URL não permitida' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    console.log(`Analyzing relevance - inputType: ${inputType}, mode: ${mode}, query length: ${searchQuery.length}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: 'Erro interno ao processar análise.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Get content based on input type
@@ -51,9 +98,13 @@ serve(async (req) => {
     } else {
       sourceLabel = `URL: ${websiteUrl}`;
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         const response = await fetch(websiteUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LLMScoreAnalyzer/1.0)' }
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LLMScoreAnalyzer/1.0)' },
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         const html = await response.text();
         analysisContent = html
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
