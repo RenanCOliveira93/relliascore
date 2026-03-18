@@ -223,7 +223,7 @@ const Index = () => {
                 <div className="flex gap-2">
                   <Button
                     variant="default"
-                    onClick={() => setShowLeadDialog(true)}
+                    onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
                     className="gap-2"
                   >
                     <FileDown className="h-4 w-4" />
