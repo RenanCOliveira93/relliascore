@@ -4,13 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Globe, Sparkles, FileDown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Search, Globe, Sparkles, FileDown, LogOut } from "lucide-react";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
 import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
-import LeadCaptureDialog from "@/components/LeadCaptureDialog";
+import { generateAnalysisPdf } from "@/lib/generatePdf";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, AnalysisMode, InputType } from "@/types/analysis";
 
@@ -22,8 +23,8 @@ const Index = () => {
   const [inputType, setInputType] = useState<InputType>("webpage");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [showLeadDialog, setShowLeadDialog] = useState(false);
   const { toast } = useToast();
+  const { signOut } = useAuth();
 
   const handleAnalyze = async () => {
     if (inputType === "webpage") {
@@ -101,14 +102,20 @@ const Index = () => {
       <div className="relative z-10">
         <header className="border-b border-border/50 backdrop-blur-md bg-background/30">
           <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center backdrop-blur-sm">
-                <Sparkles className="h-6 w-6 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center backdrop-blur-sm">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold">LLM Score</h1>
+                  <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-semibold">LLM Score</h1>
-                <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
-              </div>
+              <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
+                <LogOut className="h-4 w-4" />
+                Sair
+              </Button>
             </div>
           </div>
         </header>
@@ -216,7 +223,7 @@ const Index = () => {
                 <div className="flex gap-2">
                   <Button
                     variant="default"
-                    onClick={() => setShowLeadDialog(true)}
+                    onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
                     className="gap-2"
                   >
                     <FileDown className="h-4 w-4" />
@@ -237,16 +244,6 @@ const Index = () => {
         </footer>
       </div>
 
-      {result && (
-        <LeadCaptureDialog
-          open={showLeadDialog}
-          onOpenChange={setShowLeadDialog}
-          result={result}
-          websiteUrl={displaySource}
-          searchQuery={searchQuery}
-          mode={mode}
-        />
-      )}
     </div>
   );
 };
