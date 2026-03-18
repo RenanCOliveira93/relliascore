@@ -244,16 +244,6 @@ const Index = () => {
         </footer>
       </div>
 
-      {result && (
-        <LeadCaptureDialog
-          open={showLeadDialog}
-          onOpenChange={setShowLeadDialog}
-          result={result}
-          websiteUrl={displaySource}
-          searchQuery={searchQuery}
-          mode={mode}
-        />
-      )}
     </div>
   );
 };
