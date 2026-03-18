@@ -239,7 +239,7 @@ const Index = () => {
 
         <footer className="border-t border-border/50 mt-auto backdrop-blur-md bg-background/30">
           <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-            LLM Score - Diagnóstico Completo de Relevância para Inteligências Artificiais
+            RELLIA SCORE - Diagnóstico Completo de Relevância para Inteligências Artificiais
           </div>
         </footer>
       </div>
