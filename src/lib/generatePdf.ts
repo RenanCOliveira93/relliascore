@@ -180,7 +180,7 @@ export function generateAnalysisPdf(
   doc.setTextColor(...COLORS.white);
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("LLM Score — Relatório de Análise", margin, 18);
+  doc.text("RELLIA SCORE — Relatório de Análise", margin, 18);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, margin, 26);
