@@ -4,13 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Globe, Sparkles, FileDown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Search, Globe, Sparkles, FileDown, LogOut } from "lucide-react";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
 import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
-import LeadCaptureDialog from "@/components/LeadCaptureDialog";
+import { generateAnalysisPdf } from "@/lib/generatePdf";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, AnalysisMode, InputType } from "@/types/analysis";
 
