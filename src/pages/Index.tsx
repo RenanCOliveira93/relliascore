@@ -23,8 +23,8 @@ const Index = () => {
   const [inputType, setInputType] = useState<InputType>("webpage");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [showLeadDialog, setShowLeadDialog] = useState(false);
   const { toast } = useToast();
+  const { signOut } = useAuth();
 
   const handleAnalyze = async () => {
     if (inputType === "webpage") {
