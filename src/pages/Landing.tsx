@@ -33,7 +33,7 @@ const Landing = () => {
             <div className="h-9 w-9 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
-            <span className="text-lg font-bold tracking-tight">LLM Score</span>
+            <span className="text-lg font-bold tracking-tight">RELLIA SCORE</span>
           </div>
           <Button onClick={handleCTA} variant="outline" size="sm" className="gap-1.5">
             {user ? "Ir para Painel" : "Entrar"}
@@ -201,7 +201,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <span>LLM Score</span>
+            <span>RELLIA SCORE</span>
           </div>
           <p>Diagnóstico de Relevância para Inteligências Artificiais</p>
         </div>
