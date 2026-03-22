@@ -91,7 +91,7 @@ const Auth = () => {
             <div className="h-12 w-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center backdrop-blur-sm">
               <Sparkles className="h-7 w-7 text-primary" />
             </div>
-            <span className="text-2xl font-bold">RELLIA SCORE</span>
+            <span className="text-2xl font-bold">RELLIA</span>
           </div>
           <p className="text-muted-foreground text-sm">Acesse sua área de diagnóstico</p>
         </div>

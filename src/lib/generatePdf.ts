@@ -459,7 +459,7 @@ export function generateAnalysisPdf(
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(...COLORS.muted);
-    doc.text("RELLIA SCORE — llm-score.lovable.app", margin, 290);
+    doc.text("RELLIA — relliascore.lovable.app", margin, 290);
     doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, 290, { align: "right" });
   }
 

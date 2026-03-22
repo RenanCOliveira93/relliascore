@@ -201,7 +201,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <span>RELLIA SCORE</span>
+            <span>RELLIA</span>
           </div>
           <p>Diagnóstico de Relevância para Inteligências Artificiais</p>
         </div>
