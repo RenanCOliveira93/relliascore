@@ -108,7 +108,7 @@ const Index = () => {
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold">RELLIA SCORE</h1>
+                  <h1 className="text-xl font-semibold">RELLIA</h1>
                   <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
                 </div>
               </div>
