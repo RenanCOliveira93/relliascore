@@ -180,7 +180,7 @@ export function generateAnalysisPdf(
   doc.setTextColor(...COLORS.white);
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("RELLIA SCORE — Relatório de Análise", margin, 18);
+  doc.text("RELLIA — Relatório de Análise", margin, 18);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, margin, 26);
@@ -459,7 +459,7 @@ export function generateAnalysisPdf(
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(...COLORS.muted);
-    doc.text("RELLIA SCORE — llm-score.lovable.app", margin, 290);
+    doc.text("RELLIA — relliascore.lovable.app", margin, 290);
     doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, 290, { align: "right" });
   }
 

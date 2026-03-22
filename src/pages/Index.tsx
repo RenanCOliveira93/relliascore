@@ -108,7 +108,7 @@ const Index = () => {
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold">RELLIA SCORE</h1>
+                  <h1 className="text-xl font-semibold">RELLIA</h1>
                   <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
                 </div>
               </div>
@@ -239,7 +239,7 @@ const Index = () => {
 
         <footer className="border-t border-border/50 mt-auto backdrop-blur-md bg-background/30">
           <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-            RELLIA SCORE - Diagnóstico Completo de Relevância para Inteligências Artificiais
+            RELLIA - Diagnóstico Completo de Relevância para Inteligências Artificiais
           </div>
         </footer>
       </div>
