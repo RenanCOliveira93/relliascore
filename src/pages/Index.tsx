@@ -33,9 +33,10 @@ const Index = () => {
   const [isBrandAnalyzing, setIsBrandAnalyzing] = useState(false);
   const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
   const [brandMode, setBrandMode] = useState<AnalysisMode>("business");
+  const [brandHistoryKey, setBrandHistoryKey] = useState(0);
 
   const { toast } = useToast();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
   const handleAnalyze = async () => {
     if (inputType === "webpage") {
