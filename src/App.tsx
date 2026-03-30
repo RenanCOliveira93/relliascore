@@ -33,6 +33,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
+      </SubscriptionProvider>
       </WorkspaceProvider>
     </AuthProvider>
   </QueryClientProvider>
