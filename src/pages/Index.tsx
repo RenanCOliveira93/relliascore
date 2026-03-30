@@ -220,6 +220,7 @@ const Index = () => {
               <TabsTrigger value="brand" className="text-sm gap-2 h-10">
                 <Scan className="h-4 w-4" />
                 Análise de Marca
+                {!planConfig.canUseBrandAnalysis && <Lock className="h-3 w-3 ml-1 opacity-50" />}
               </TabsTrigger>
             </TabsList>
 
