@@ -14,6 +14,7 @@ import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
 import BrandAnalysisForm from "@/components/BrandAnalysisForm";
 import BrandAnalysisResults from "@/components/BrandAnalysisResults";
+import BrandAnalysisHistory from "@/components/BrandAnalysisHistory";
 import { generateAnalysisPdf } from "@/lib/generatePdf";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, AnalysisMode, InputType } from "@/types/analysis";
