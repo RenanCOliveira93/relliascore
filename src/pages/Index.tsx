@@ -31,6 +31,7 @@ const Index = () => {
   // Brand analysis state
   const [isBrandAnalyzing, setIsBrandAnalyzing] = useState(false);
   const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
+  const [brandMode, setBrandMode] = useState<AnalysisMode>("business");
 
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -98,6 +99,7 @@ const Index = () => {
   }) => {
     setIsBrandAnalyzing(true);
     setBrandResult(null);
+    setBrandMode(data.mode);
     try {
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
         body: data
@@ -310,7 +312,7 @@ const Index = () => {
                     <h2 className="text-2xl font-bold">Diagnóstico da Marca</h2>
                     <Button variant="outline" onClick={handleBrandReset}>Nova Análise</Button>
                   </div>
-                  <BrandAnalysisResults result={brandResult} />
+                  <BrandAnalysisResults result={brandResult} mode={brandMode} />
                 </div>
               )}
             </TabsContent>

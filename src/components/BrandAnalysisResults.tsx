@@ -1,18 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MessageSquare, Target, Layers, Palette, FileText, Tag, Lightbulb,
-  TrendingUp, TrendingDown, Crosshair, Sparkles, BarChart3, Monitor, CheckCircle
+  TrendingUp, TrendingDown, Crosshair, Sparkles, BarChart3, Monitor, CheckCircle, FileDown
 } from "lucide-react";
 import type { BrandAnalysisResult } from "@/types/brand-analysis";
+import { generateBrandPdf } from "@/lib/generateBrandPdf";
 import { useEffect, useState } from "react";
 
 interface BrandAnalysisResultsProps {
   result: BrandAnalysisResult;
+  mode?: string;
 }
 
-const BrandAnalysisResults = ({ result }: BrandAnalysisResultsProps) => {
+const BrandAnalysisResults = ({ result, mode = "business" }: BrandAnalysisResultsProps) => {
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
@@ -48,6 +51,18 @@ const BrandAnalysisResults = ({ result }: BrandAnalysisResultsProps) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Export PDF Button */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          onClick={() => generateBrandPdf(result, mode)}
+          className="gap-2"
+        >
+          <FileDown className="h-4 w-4" />
+          Exportar PDF
+        </Button>
+      </div>
+
       {/* Consistency Score */}
       <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getScoreGradient(result.consistencia_score)} border border-border p-8`}>
         <div className="flex flex-col items-center justify-center">
