@@ -14,6 +14,7 @@ import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
 import BrandAnalysisForm from "@/components/BrandAnalysisForm";
 import BrandAnalysisResults from "@/components/BrandAnalysisResults";
+import BrandAnalysisHistory from "@/components/BrandAnalysisHistory";
 import { generateAnalysisPdf } from "@/lib/generatePdf";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, AnalysisMode, InputType } from "@/types/analysis";
@@ -32,9 +33,10 @@ const Index = () => {
   const [isBrandAnalyzing, setIsBrandAnalyzing] = useState(false);
   const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
   const [brandMode, setBrandMode] = useState<AnalysisMode>("business");
+  const [brandHistoryKey, setBrandHistoryKey] = useState(0);
 
   const { toast } = useToast();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
   const handleAnalyze = async () => {
     if (inputType === "webpage") {
@@ -107,6 +109,21 @@ const Index = () => {
       if (error) throw error;
       if (result.error) throw new Error(result.error);
       setBrandResult(result);
+
+      // Save to database
+      if (user) {
+        await supabase.from("brand_analyses").insert({
+          user_id: user.id,
+          mode: data.mode,
+          website: data.website || null,
+          linkedin: data.linkedin || null,
+          instagram: data.instagram || null,
+          description: data.description,
+          result: result as any,
+        });
+        setBrandHistoryKey((k) => k + 1);
+      }
+
       toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo da sua marca." });
     } catch (error) {
       console.error("Brand analysis error:", error);
@@ -299,6 +316,14 @@ const Index = () => {
                       cores, comunicação e recomendações estratégicas.
                     </p>
                   </div>
+
+                  <BrandAnalysisHistory
+                    refreshKey={brandHistoryKey}
+                    onViewResult={(res, m) => {
+                      setBrandResult(res);
+                      setBrandMode(m as AnalysisMode);
+                    }}
+                  />
 
                   <BrandAnalysisForm onAnalyze={handleBrandAnalyze} isAnalyzing={isBrandAnalyzing} />
                 </div>
