@@ -51,6 +51,18 @@ const BrandAnalysisResults = ({ result, mode = "business" }: BrandAnalysisResult
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Export PDF Button */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          onClick={() => generateBrandPdf(result, mode)}
+          className="gap-2"
+        >
+          <FileDown className="h-4 w-4" />
+          Exportar PDF
+        </Button>
+      </div>
+
       {/* Consistency Score */}
       <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getScoreGradient(result.consistencia_score)} border border-border p-8`}>
         <div className="flex flex-col items-center justify-center">
