@@ -124,6 +124,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          analyses_limit: number
+          analyses_used: number
+          created_at: string
+          id: string
+          period_start: string
+          plan: Database["public"]["Enums"]["app_plan"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analyses_limit?: number
+          analyses_used?: number
+          created_at?: string
+          id?: string
+          period_start?: string
+          plan?: Database["public"]["Enums"]["app_plan"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analyses_limit?: number
+          analyses_used?: number
+          created_at?: string
+          id?: string
+          period_start?: string
+          plan?: Database["public"]["Enums"]["app_plan"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workspaces: {
         Row: {
           created_at: string
@@ -153,10 +186,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_analysis_usage: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_plan: "free" | "pro" | "premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -283,6 +319,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_plan: ["free", "pro", "premium"],
+    },
   },
 } as const

@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Globe, Sparkles, FileDown, LogOut, Scan } from "lucide-react";
+import { Search, Globe, Sparkles, FileDown, LogOut, Scan, Lock, Crown } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Badge } from "@/components/ui/badge";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
@@ -40,8 +42,18 @@ const Index = () => {
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { activeWorkspace } = useWorkspace();
+  const { planConfig, canAnalyze, remainingAnalyses, incrementUsage, subscription } = useSubscription();
 
   const handleAnalyze = async () => {
+    if (!canAnalyze) {
+      toast({ title: "Limite atingido", description: "Você atingiu o limite de análises do seu plano. Faça upgrade para continuar.", variant: "destructive" });
+      return;
+    }
+    if (inputType === "text" && !planConfig.canUseTextMode) {
+      toast({ title: "Recurso PRO", description: "Análise de texto está disponível a partir do plano PRO.", variant: "destructive" });
+      return;
+    }
+
     if (inputType === "webpage") {
       if (!websiteUrl.trim() || !searchQuery.trim()) {
         toast({ title: "Campos obrigatórios", description: "Por favor, preencha a URL do site e a pesquisa.", variant: "destructive" });
@@ -58,6 +70,8 @@ const Index = () => {
       setIsAnalyzing(true);
       setResult(null);
       try {
+        const allowed = await incrementUsage();
+        if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage" }
         });
@@ -79,6 +93,8 @@ const Index = () => {
       setIsAnalyzing(true);
       setResult(null);
       try {
+        const allowed = await incrementUsage();
+        if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text" }
         });
@@ -102,10 +118,20 @@ const Index = () => {
     description: string;
     mode: AnalysisMode;
   }) => {
+    if (!canAnalyze) {
+      toast({ title: "Limite atingido", description: "Você atingiu o limite de análises do seu plano.", variant: "destructive" });
+      return;
+    }
+    if (!planConfig.canUseBrandAnalysis) {
+      toast({ title: "Recurso PRO", description: "Análise de marca está disponível a partir do plano PRO.", variant: "destructive" });
+      return;
+    }
     setIsBrandAnalyzing(true);
     setBrandResult(null);
     setBrandMode(data.mode);
     try {
+      const allowed = await incrementUsage();
+      if (!allowed) throw new Error("Limite de análises atingido.");
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
         body: data
       });
@@ -113,7 +139,6 @@ const Index = () => {
       if (result.error) throw new Error(result.error);
       setBrandResult(result);
 
-      // Save to database
       if (user) {
         await supabase.from("brand_analyses").insert({
           user_id: user.id,
@@ -168,6 +193,13 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <Badge variant="outline" className="gap-1.5 text-xs">
+                  <Crown className="h-3 w-3" />
+                  {subscription?.plan === "premium" ? "Premium" : subscription?.plan === "pro" ? "PRO" : "Grátis"}
+                  {remainingAnalyses !== null && (
+                    <span className="text-muted-foreground">• {remainingAnalyses} restantes</span>
+                  )}
+                </Badge>
                 <WorkspaceSwitcher />
                 <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
                   <LogOut className="h-4 w-4" />
@@ -188,6 +220,7 @@ const Index = () => {
               <TabsTrigger value="brand" className="text-sm gap-2 h-10">
                 <Scan className="h-4 w-4" />
                 Análise de Marca
+                {!planConfig.canUseBrandAnalysis && <Lock className="h-3 w-3 ml-1 opacity-50" />}
               </TabsTrigger>
             </TabsList>
 
@@ -216,7 +249,13 @@ const Index = () => {
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <AnalysisModeTabs mode={mode} onModeChange={setMode} />
-                      <InputTypeSelector inputType={inputType} onInputTypeChange={setInputType} />
+                      <InputTypeSelector inputType={inputType} onInputTypeChange={(t) => {
+                        if (t === "text" && !planConfig.canUseTextMode) {
+                          toast({ title: "Recurso PRO", description: "Análise de texto está disponível a partir do plano PRO.", variant: "destructive" });
+                          return;
+                        }
+                        setInputType(t);
+                      }} />
 
                       {inputType === "webpage" ? (
                         <div className="space-y-2">
@@ -258,10 +297,15 @@ const Index = () => {
                         <p className="text-xs text-muted-foreground">Digite como um usuário pesquisaria em uma IA</p>
                       </div>
 
-                      <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg">
+                      <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg" disabled={!canAnalyze}>
                         <Search className="mr-2 h-5 w-5" />
-                        Analisar Relevância
+                        {canAnalyze ? "Analisar Relevância" : "Limite de análises atingido"}
                       </Button>
+                      {!canAnalyze && (
+                        <p className="text-xs text-center text-destructive">
+                          Você atingiu o limite do seu plano. Faça upgrade para continuar analisando.
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -293,14 +337,21 @@ const Index = () => {
                       <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{displaySource}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="default"
-                        onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
-                        className="gap-2"
-                      >
-                        <FileDown className="h-4 w-4" />
-                        Exportar PDF
-                      </Button>
+                      {planConfig.canExportPdf ? (
+                        <Button
+                          variant="default"
+                          onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
+                          className="gap-2"
+                        >
+                          <FileDown className="h-4 w-4" />
+                          Exportar PDF
+                        </Button>
+                      ) : (
+                        <Button variant="default" disabled className="gap-2 opacity-60">
+                          <Lock className="h-4 w-4" />
+                          PDF (PRO)
+                        </Button>
+                      )}
                       <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
                     </div>
                   </div>
