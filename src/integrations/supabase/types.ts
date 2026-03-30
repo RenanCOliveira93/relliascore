@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_analyses: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          instagram: string | null
+          linkedin: string | null
+          mode: string
+          result: Json
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          mode?: string
+          result: Json
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          mode?: string
+          result?: Json
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           analysis_mode: string | null
