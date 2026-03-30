@@ -1,11 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MessageSquare, Target, Layers, Palette, FileText, Tag, Lightbulb,
-  TrendingUp, TrendingDown, Crosshair, Sparkles, BarChart3, Monitor, CheckCircle
+  TrendingUp, TrendingDown, Crosshair, Sparkles, BarChart3, Monitor, CheckCircle, FileDown
 } from "lucide-react";
 import type { BrandAnalysisResult } from "@/types/brand-analysis";
+import { generateBrandPdf } from "@/lib/generateBrandPdf";
 import { useEffect, useState } from "react";
 
 interface BrandAnalysisResultsProps {
