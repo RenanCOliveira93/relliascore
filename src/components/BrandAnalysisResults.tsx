@@ -12,9 +12,10 @@ import { useEffect, useState } from "react";
 
 interface BrandAnalysisResultsProps {
   result: BrandAnalysisResult;
+  mode?: string;
 }
 
-const BrandAnalysisResults = ({ result }: BrandAnalysisResultsProps) => {
+const BrandAnalysisResults = ({ result, mode = "business" }: BrandAnalysisResultsProps) => {
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
