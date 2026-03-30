@@ -317,6 +317,14 @@ const Index = () => {
                     </p>
                   </div>
 
+                  <BrandAnalysisHistory
+                    refreshKey={brandHistoryKey}
+                    onViewResult={(res, m) => {
+                      setBrandResult(res);
+                      setBrandMode(m as AnalysisMode);
+                    }}
+                  />
+
                   <BrandAnalysisForm onAnalyze={handleBrandAnalyze} isAnalyzing={isBrandAnalyzing} />
                 </div>
               )}
