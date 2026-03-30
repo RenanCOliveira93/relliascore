@@ -35,10 +35,15 @@ const Landing = () => {
             </div>
             <span className="text-lg font-bold tracking-tight">RELLIA</span>
           </div>
-          <Button onClick={handleCTA} variant="outline" size="sm" className="gap-1.5">
-            {user ? "Ir para Painel" : "Entrar"}
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => navigate("/pricing")} variant="ghost" size="sm">
+              Planos
+            </Button>
+            <Button onClick={handleCTA} variant="outline" size="sm" className="gap-1.5">
+              {user ? "Ir para Painel" : "Entrar"}
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </nav>
 
