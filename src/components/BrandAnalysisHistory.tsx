@@ -26,6 +26,7 @@ interface BrandAnalysisHistoryProps {
 
 const BrandAnalysisHistory = ({ onViewResult, refreshKey }: BrandAnalysisHistoryProps) => {
   const { user } = useAuth();
+  const { activeWorkspace } = useWorkspace();
   const [records, setRecords] = useState<BrandAnalysisRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -33,12 +34,17 @@ const BrandAnalysisHistory = ({ onViewResult, refreshKey }: BrandAnalysisHistory
   const fetchHistory = async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("brand_analyses")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(20);
 
+    if (activeWorkspace) {
+      query = query.eq("workspace_id", activeWorkspace.id);
+    }
+
+    const { data, error } = await query;
     if (!error && data) {
       setRecords(data as unknown as BrandAnalysisRecord[]);
     }
@@ -47,7 +53,7 @@ const BrandAnalysisHistory = ({ onViewResult, refreshKey }: BrandAnalysisHistory
 
   useEffect(() => {
     fetchHistory();
-  }, [user, refreshKey]);
+  }, [user, refreshKey, activeWorkspace?.id]);
 
   const handleDelete = async (id: string) => {
     await supabase.from("brand_analyses").delete().eq("id", id);
