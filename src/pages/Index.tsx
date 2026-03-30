@@ -109,6 +109,21 @@ const Index = () => {
       if (error) throw error;
       if (result.error) throw new Error(result.error);
       setBrandResult(result);
+
+      // Save to database
+      if (user) {
+        await supabase.from("brand_analyses").insert({
+          user_id: user.id,
+          mode: data.mode,
+          website: data.website || null,
+          linkedin: data.linkedin || null,
+          instagram: data.instagram || null,
+          description: data.description,
+          result: result as any,
+        });
+        setBrandHistoryKey((k) => k + 1);
+      }
+
       toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo da sua marca." });
     } catch (error) {
       console.error("Brand analysis error:", error);
