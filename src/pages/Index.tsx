@@ -312,7 +312,7 @@ const Index = () => {
                     <h2 className="text-2xl font-bold">Diagnóstico da Marca</h2>
                     <Button variant="outline" onClick={handleBrandReset}>Nova Análise</Button>
                   </div>
-                  <BrandAnalysisResults result={brandResult} />
+                  <BrandAnalysisResults result={brandResult} mode={brandMode} />
                 </div>
               )}
             </TabsContent>
