@@ -11,6 +11,7 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import Workspaces from "./pages/Workspaces";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/home" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

@@ -64,7 +64,7 @@ function FeatureValue({ value }: { value: boolean | string }) {
     return <span className="text-sm font-semibold text-foreground">{value}</span>;
   }
   return value ? (
-    <Check className="h-5 w-5 text-green-400" />
+    <Check className="h-5 w-5 text-accent" />
   ) : (
     <X className="h-5 w-5 text-muted-foreground/40" />
   );
