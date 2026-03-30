@@ -128,7 +128,9 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
                   Exemplo de conteúdo otimizado que alcançaria um score próximo a 100%:
                 </p>
                 <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{result.ideal_example}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {result.ideal_example?.replace(/[*#_~`>]/g, '').replace(/\n{3,}/g, '\n\n').trim()}
+                  </p>
                 </div>
               </CardContent>
             </Card>
