@@ -99,6 +99,7 @@ const Index = () => {
   }) => {
     setIsBrandAnalyzing(true);
     setBrandResult(null);
+    setBrandMode(data.mode);
     try {
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
         body: data
