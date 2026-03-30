@@ -167,10 +167,13 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
-                <LogOut className="h-4 w-4" />
-                Sair
-              </Button>
+              <div className="flex items-center gap-3">
+                <WorkspaceSwitcher />
+                <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
             </div>
           </div>
         </header>
