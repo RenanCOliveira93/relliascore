@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Search, Globe, Sparkles, FileDown, LogOut, Scan } from "lucide-react";
+import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
@@ -37,6 +39,7 @@ const Index = () => {
 
   const { toast } = useToast();
   const { signOut, user } = useAuth();
+  const { activeWorkspace } = useWorkspace();
 
   const handleAnalyze = async () => {
     if (inputType === "webpage") {
@@ -120,6 +123,7 @@ const Index = () => {
           instagram: data.instagram || null,
           description: data.description,
           result: result as any,
+          workspace_id: activeWorkspace?.id ?? null,
         });
         setBrandHistoryKey((k) => k + 1);
       }
@@ -163,10 +167,13 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground">Diagnóstico Completo de Relevância para IA</p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
-                <LogOut className="h-4 w-4" />
-                Sair
-              </Button>
+              <div className="flex items-center gap-3">
+                <WorkspaceSwitcher />
+                <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
             </div>
           </div>
         </header>
