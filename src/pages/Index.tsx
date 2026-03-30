@@ -297,10 +297,15 @@ const Index = () => {
                         <p className="text-xs text-muted-foreground">Digite como um usuário pesquisaria em uma IA</p>
                       </div>
 
-                      <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg">
+                      <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg" disabled={!canAnalyze}>
                         <Search className="mr-2 h-5 w-5" />
-                        Analisar Relevância
+                        {canAnalyze ? "Analisar Relevância" : "Limite de análises atingido"}
                       </Button>
+                      {!canAnalyze && (
+                        <p className="text-xs text-center text-destructive">
+                          Você atingiu o limite do seu plano. Faça upgrade para continuar analisando.
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
