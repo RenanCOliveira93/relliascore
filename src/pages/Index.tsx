@@ -193,6 +193,13 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <Badge variant="outline" className="gap-1.5 text-xs">
+                  <Crown className="h-3 w-3" />
+                  {subscription?.plan === "premium" ? "Premium" : subscription?.plan === "pro" ? "PRO" : "Grátis"}
+                  {remainingAnalyses !== null && (
+                    <span className="text-muted-foreground">• {remainingAnalyses} restantes</span>
+                  )}
+                </Badge>
                 <WorkspaceSwitcher />
                 <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
                   <LogOut className="h-4 w-4" />
