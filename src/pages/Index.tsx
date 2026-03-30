@@ -45,6 +45,15 @@ const Index = () => {
   const { planConfig, canAnalyze, remainingAnalyses, incrementUsage, subscription } = useSubscription();
 
   const handleAnalyze = async () => {
+    if (!canAnalyze) {
+      toast({ title: "Limite atingido", description: "Você atingiu o limite de análises do seu plano. Faça upgrade para continuar.", variant: "destructive" });
+      return;
+    }
+    if (inputType === "text" && !planConfig.canUseTextMode) {
+      toast({ title: "Recurso PRO", description: "Análise de texto está disponível a partir do plano PRO.", variant: "destructive" });
+      return;
+    }
+
     if (inputType === "webpage") {
       if (!websiteUrl.trim() || !searchQuery.trim()) {
         toast({ title: "Campos obrigatórios", description: "Por favor, preencha a URL do site e a pesquisa.", variant: "destructive" });
@@ -61,6 +70,8 @@ const Index = () => {
       setIsAnalyzing(true);
       setResult(null);
       try {
+        const allowed = await incrementUsage();
+        if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage" }
         });
@@ -82,6 +93,8 @@ const Index = () => {
       setIsAnalyzing(true);
       setResult(null);
       try {
+        const allowed = await incrementUsage();
+        if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text" }
         });
