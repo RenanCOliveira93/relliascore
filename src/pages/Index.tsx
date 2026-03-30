@@ -31,6 +31,7 @@ const Index = () => {
   // Brand analysis state
   const [isBrandAnalyzing, setIsBrandAnalyzing] = useState(false);
   const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
+  const [brandMode, setBrandMode] = useState<AnalysisMode>("business");
 
   const { toast } = useToast();
   const { signOut } = useAuth();
