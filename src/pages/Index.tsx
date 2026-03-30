@@ -337,14 +337,21 @@ const Index = () => {
                       <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{displaySource}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="default"
-                        onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
-                        className="gap-2"
-                      >
-                        <FileDown className="h-4 w-4" />
-                        Exportar PDF
-                      </Button>
+                      {planConfig.canExportPdf ? (
+                        <Button
+                          variant="default"
+                          onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
+                          className="gap-2"
+                        >
+                          <FileDown className="h-4 w-4" />
+                          Exportar PDF
+                        </Button>
+                      ) : (
+                        <Button variant="default" disabled className="gap-2 opacity-60">
+                          <Lock className="h-4 w-4" />
+                          PDF (PRO)
+                        </Button>
+                      )}
                       <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
                     </div>
                   </div>
