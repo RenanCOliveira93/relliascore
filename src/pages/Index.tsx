@@ -3,17 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Globe, Sparkles, FileDown, LogOut } from "lucide-react";
+import { Search, Globe, Sparkles, FileDown, LogOut, Scan } from "lucide-react";
 import RobotAnimation from "@/components/RobotAnimation";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
 import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
+import BrandAnalysisForm from "@/components/BrandAnalysisForm";
+import BrandAnalysisResults from "@/components/BrandAnalysisResults";
 import { generateAnalysisPdf } from "@/lib/generatePdf";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisResult, AnalysisMode, InputType } from "@/types/analysis";
+import type { BrandAnalysisResult } from "@/types/brand-analysis";
 
 const Index = () => {
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -23,6 +27,11 @@ const Index = () => {
   const [inputType, setInputType] = useState<InputType>("webpage");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+
+  // Brand analysis state
+  const [isBrandAnalyzing, setIsBrandAnalyzing] = useState(false);
+  const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
+
   const { toast } = useToast();
   const { signOut } = useAuth();
 
@@ -32,20 +41,16 @@ const Index = () => {
         toast({ title: "Campos obrigatórios", description: "Por favor, preencha a URL do site e a pesquisa.", variant: "destructive" });
         return;
       }
-
       let formattedUrl = websiteUrl.trim();
       if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
         formattedUrl = "https://" + formattedUrl;
       }
-
       try { new URL(formattedUrl); } catch {
         toast({ title: "URL inválida", description: "Por favor, insira uma URL válida.", variant: "destructive" });
         return;
       }
-
       setIsAnalyzing(true);
       setResult(null);
-
       try {
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage" }
@@ -65,10 +70,8 @@ const Index = () => {
         toast({ title: "Campos obrigatórios", description: "Por favor, preencha o texto e a pesquisa.", variant: "destructive" });
         return;
       }
-
       setIsAnalyzing(true);
       setResult(null);
-
       try {
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text" }
@@ -86,11 +89,40 @@ const Index = () => {
     }
   };
 
+  const handleBrandAnalyze = async (data: {
+    website: string;
+    linkedin: string;
+    instagram: string;
+    description: string;
+    mode: AnalysisMode;
+  }) => {
+    setIsBrandAnalyzing(true);
+    setBrandResult(null);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
+        body: data
+      });
+      if (error) throw error;
+      if (result.error) throw new Error(result.error);
+      setBrandResult(result);
+      toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo da sua marca." });
+    } catch (error) {
+      console.error("Brand analysis error:", error);
+      toast({ title: "Erro na análise", description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar a marca.", variant: "destructive" });
+    } finally {
+      setIsBrandAnalyzing(false);
+    }
+  };
+
   const handleReset = () => {
     setResult(null);
     setWebsiteUrl("");
     setSearchQuery("");
     setTextContent("");
+  };
+
+  const handleBrandReset = () => {
+    setBrandResult(null);
   };
 
   const displaySource = inputType === "webpage" ? websiteUrl : "Texto fornecido";
@@ -121,120 +153,168 @@ const Index = () => {
         </header>
 
         <main className="container mx-auto px-4 py-8 max-w-4xl">
-          {!isAnalyzing && !result && (
-            <div className="space-y-8">
-              <div className="text-center space-y-4 py-8">
-                <h2 className="text-4xl font-bold tracking-tight">
-                  Descubra seu Score de
-                  <span className="text-primary"> Relevância LLM</span>
-                </h2>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Diagnóstico completo com sub-scores, plano de ação, análise de compatibilidade
-                  e palavras-chave para otimizar seu conteúdo para IAs.
-                </p>
-              </div>
+          <Tabs defaultValue="relevance" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
+              <TabsTrigger value="relevance" className="text-sm gap-2 h-10">
+                <Search className="h-4 w-4" />
+                Análise de Relevância
+              </TabsTrigger>
+              <TabsTrigger value="brand" className="text-sm gap-2 h-10">
+                <Scan className="h-4 w-4" />
+                Análise de Marca
+              </TabsTrigger>
+            </TabsList>
 
-              <Card className="backdrop-blur-md bg-card/80 border-border/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    Configurar Análise
-                  </CardTitle>
-                  <CardDescription>Escolha o perfil, a fonte, e configure sua análise</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <AnalysisModeTabs mode={mode} onModeChange={setMode} />
-                  <InputTypeSelector inputType={inputType} onInputTypeChange={setInputType} />
-
-                  {inputType === "webpage" ? (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">URL do Site</label>
-                      <Input
-                        placeholder="https://exemplo.com ou https://exemplo.com/servicos"
-                        value={websiteUrl}
-                        onChange={(e) => setWebsiteUrl(e.target.value)}
-                        className="h-12 bg-input/50 backdrop-blur-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">Pode ser a página inicial ou uma página específica</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Texto para Análise</label>
-                      <Textarea
-                        placeholder="Cole aqui o texto que pretende publicar..."
-                        value={textContent}
-                        onChange={(e) => setTextContent(e.target.value)}
-                        rows={8}
-                        className="bg-input/50 backdrop-blur-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">Cole o conteúdo que pretende publicar para receber sugestões antes da publicação</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Pesquisa ou Problema</label>
-                    <Textarea
-                      placeholder={mode === "influencer"
-                        ? "Ex: 'Quem é referência em marketing digital no Brasil?'"
-                        : "Ex: 'Melhor software para gestão de projetos'"
-                      }
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      rows={3}
-                      className="bg-input/50 backdrop-blur-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">Digite como um usuário pesquisaria em uma IA</p>
+            {/* ========== RELEVANCE TAB ========== */}
+            <TabsContent value="relevance">
+              {!isAnalyzing && !result && (
+                <div className="space-y-8">
+                  <div className="text-center space-y-4 py-8">
+                    <h2 className="text-4xl font-bold tracking-tight">
+                      Descubra seu Score de
+                      <span className="text-primary"> Relevância LLM</span>
+                    </h2>
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                      Diagnóstico completo com sub-scores, plano de ação, análise de compatibilidade
+                      e palavras-chave para otimizar seu conteúdo para IAs.
+                    </p>
                   </div>
 
-                  <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg">
-                    <Search className="mr-2 h-5 w-5" />
-                    Analisar Relevância
-                  </Button>
-                </CardContent>
-              </Card>
+                  <Card className="backdrop-blur-md bg-card/80 border-border/50">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Globe className="h-5 w-5" />
+                        Configurar Análise
+                      </CardTitle>
+                      <CardDescription>Escolha o perfil, a fonte, e configure sua análise</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <AnalysisModeTabs mode={mode} onModeChange={setMode} />
+                      <InputTypeSelector inputType={inputType} onInputTypeChange={setInputType} />
 
-              <div className="grid md:grid-cols-3 gap-4 pt-8">
-                {[
-                  { step: "1", title: "Escolha o perfil", description: "Influencer ou Empresa" },
-                  { step: "2", title: "Insira conteúdo e pesquisa", description: "URL ou texto + consulta" },
-                  { step: "3", title: "Receba o diagnóstico", description: "Score, plano de ação e mais" },
-                ].map((item) => (
-                  <div key={item.step} className="text-center p-6 rounded-lg border border-border/50 bg-card/60 backdrop-blur-md">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center mx-auto mb-3">
-                      {item.step}
-                    </div>
-                    <h3 className="font-medium mb-1">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                      {inputType === "webpage" ? (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">URL do Site</label>
+                          <Input
+                            placeholder="https://exemplo.com ou https://exemplo.com/servicos"
+                            value={websiteUrl}
+                            onChange={(e) => setWebsiteUrl(e.target.value)}
+                            className="h-12 bg-input/50 backdrop-blur-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">Pode ser a página inicial ou uma página específica</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Texto para Análise</label>
+                          <Textarea
+                            placeholder="Cole aqui o texto que pretende publicar..."
+                            value={textContent}
+                            onChange={(e) => setTextContent(e.target.value)}
+                            rows={8}
+                            className="bg-input/50 backdrop-blur-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">Cole o conteúdo que pretende publicar para receber sugestões antes da publicação</p>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Pesquisa ou Problema</label>
+                        <Textarea
+                          placeholder={mode === "influencer"
+                            ? "Ex: 'Quem é referência em marketing digital no Brasil?'"
+                            : "Ex: 'Melhor software para gestão de projetos'"
+                          }
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          rows={3}
+                          className="bg-input/50 backdrop-blur-sm"
+                        />
+                        <p className="text-xs text-muted-foreground">Digite como um usuário pesquisaria em uma IA</p>
+                      </div>
+
+                      <Button onClick={handleAnalyze} className="w-full h-12 text-lg" size="lg">
+                        <Search className="mr-2 h-5 w-5" />
+                        Analisar Relevância
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid md:grid-cols-3 gap-4 pt-8">
+                    {[
+                      { step: "1", title: "Escolha o perfil", description: "Influencer ou Empresa" },
+                      { step: "2", title: "Insira conteúdo e pesquisa", description: "URL ou texto + consulta" },
+                      { step: "3", title: "Receba o diagnóstico", description: "Score, plano de ação e mais" },
+                    ].map((item) => (
+                      <div key={item.step} className="text-center p-6 rounded-lg border border-border/50 bg-card/60 backdrop-blur-md">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center mx-auto mb-3">
+                          {item.step}
+                        </div>
+                        <h3 className="font-medium mb-1">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isAnalyzing && <RobotAnimation />}
-
-          {result && !isAnalyzing && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <h2 className="text-2xl font-bold">Resultado da Análise</h2>
-                  <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{displaySource}</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="default"
-                    onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
-                    className="gap-2"
-                  >
-                    <FileDown className="h-4 w-4" />
-                    Exportar PDF
-                  </Button>
-                  <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
+              )}
+
+              {isAnalyzing && <RobotAnimation />}
+
+              {result && !isAnalyzing && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h2 className="text-2xl font-bold">Resultado da Análise</h2>
+                      <p className="text-muted-foreground text-sm mt-1 truncate max-w-md">{displaySource}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="default"
+                        onClick={() => generateAnalysisPdf(result, displaySource, searchQuery, mode)}
+                        className="gap-2"
+                      >
+                        <FileDown className="h-4 w-4" />
+                        Exportar PDF
+                      </Button>
+                      <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
+                    </div>
+                  </div>
+                  <ScoreDisplay result={result} />
                 </div>
-              </div>
-              <ScoreDisplay result={result} />
-            </div>
-          )}
+              )}
+            </TabsContent>
+
+            {/* ========== BRAND TAB ========== */}
+            <TabsContent value="brand">
+              {!isBrandAnalyzing && !brandResult && (
+                <div className="space-y-8">
+                  <div className="text-center space-y-4 py-8">
+                    <h2 className="text-4xl font-bold tracking-tight">
+                      Análise Profunda da
+                      <span className="text-primary"> Sua Marca</span>
+                    </h2>
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                      Descubra como a IA enxerga sua marca: tom de voz, público, posicionamento,
+                      cores, comunicação e recomendações estratégicas.
+                    </p>
+                  </div>
+
+                  <BrandAnalysisForm onAnalyze={handleBrandAnalyze} isAnalyzing={isBrandAnalyzing} />
+                </div>
+              )}
+
+              {isBrandAnalyzing && <RobotAnimation />}
+
+              {brandResult && !isBrandAnalyzing && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <h2 className="text-2xl font-bold">Diagnóstico da Marca</h2>
+                    <Button variant="outline" onClick={handleBrandReset}>Nova Análise</Button>
+                  </div>
+                  <BrandAnalysisResults result={brandResult} />
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </main>
 
         <footer className="border-t border-border/50 mt-auto backdrop-blur-md bg-background/30">
@@ -243,7 +323,6 @@ const Index = () => {
           </div>
         </footer>
       </div>
-
     </div>
   );
 };
