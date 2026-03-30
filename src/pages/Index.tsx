@@ -249,7 +249,13 @@ const Index = () => {
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <AnalysisModeTabs mode={mode} onModeChange={setMode} />
-                      <InputTypeSelector inputType={inputType} onInputTypeChange={setInputType} />
+                      <InputTypeSelector inputType={inputType} onInputTypeChange={(t) => {
+                        if (t === "text" && !planConfig.canUseTextMode) {
+                          toast({ title: "Recurso PRO", description: "Análise de texto está disponível a partir do plano PRO.", variant: "destructive" });
+                          return;
+                        }
+                        setInputType(t);
+                      }} />
 
                       {inputType === "webpage" ? (
                         <div className="space-y-2">
