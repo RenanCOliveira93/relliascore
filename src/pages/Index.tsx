@@ -42,6 +42,7 @@ const Index = () => {
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { activeWorkspace } = useWorkspace();
+  const { planConfig, canAnalyze, remainingAnalyses, incrementUsage, subscription } = useSubscription();
 
   const handleAnalyze = async () => {
     if (inputType === "webpage") {
