@@ -118,10 +118,20 @@ const Index = () => {
     description: string;
     mode: AnalysisMode;
   }) => {
+    if (!canAnalyze) {
+      toast({ title: "Limite atingido", description: "Você atingiu o limite de análises do seu plano.", variant: "destructive" });
+      return;
+    }
+    if (!planConfig.canUseBrandAnalysis) {
+      toast({ title: "Recurso PRO", description: "Análise de marca está disponível a partir do plano PRO.", variant: "destructive" });
+      return;
+    }
     setIsBrandAnalyzing(true);
     setBrandResult(null);
     setBrandMode(data.mode);
     try {
+      const allowed = await incrementUsage();
+      if (!allowed) throw new Error("Limite de análises atingido.");
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
         body: data
       });
@@ -129,7 +139,6 @@ const Index = () => {
       if (result.error) throw new Error(result.error);
       setBrandResult(result);
 
-      // Save to database
       if (user) {
         await supabase.from("brand_analyses").insert({
           user_id: user.id,
