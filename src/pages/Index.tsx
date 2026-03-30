@@ -123,6 +123,7 @@ const Index = () => {
           instagram: data.instagram || null,
           description: data.description,
           result: result as any,
+          workspace_id: activeWorkspace?.id ?? null,
         });
         setBrandHistoryKey((k) => k + 1);
       }
