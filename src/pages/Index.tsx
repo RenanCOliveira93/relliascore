@@ -39,6 +39,7 @@ const Index = () => {
 
   const { toast } = useToast();
   const { signOut, user } = useAuth();
+  const { activeWorkspace } = useWorkspace();
 
   const handleAnalyze = async () => {
     if (inputType === "webpage") {
