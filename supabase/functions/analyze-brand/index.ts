@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { dispatchWebhooks } from "../_shared/webhooks.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -89,7 +90,7 @@ serve(async (req) => {
   }
 
   try {
-    const { website, linkedin, instagram, description, mode = "business" } = await req.json();
+    const { website, linkedin, instagram, description, mode = "business", workspaceId } = await req.json();
 
     if (!description || typeof description !== 'string' || description.length < 10) {
       return new Response(
@@ -257,6 +258,20 @@ Faça a análise completa usando a função fornecida.`;
         JSON.stringify({ error: 'Não foi possível processar a análise da marca.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (workspaceId) {
+      dispatchWebhooks(workspaceId, "brand_analysis.completed", {
+        mode,
+        website: website ?? null,
+        linkedin: linkedin ?? null,
+        instagram: instagram ?? null,
+        consistencia_score: result.consistencia_score,
+        tom_de_voz: result.tom_de_voz,
+        publico_alvo: result.publico_alvo,
+        recomendacoes: result.recomendacoes,
+        source: "app",
+      }).catch((e) => console.error("Webhook dispatch error:", e));
     }
 
     return new Response(

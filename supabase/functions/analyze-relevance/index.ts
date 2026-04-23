@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { dispatchWebhooks } from "../_shared/webhooks.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,7 +65,7 @@ serve(async (req) => {
   }
 
   try {
-    const { websiteUrl, searchQuery, mode = "business", inputType = "webpage", content } = await req.json();
+    const { websiteUrl, searchQuery, mode = "business", inputType = "webpage", content, workspaceId } = await req.json();
 
     // Input validation
     if (inputType !== "webpage" && inputType !== "text") {
@@ -317,6 +318,22 @@ Faça uma análise completa usando a função fornecida. Inclua obrigatoriamente
         keywords_analysis: { found: [], missing: [], suggested: [] },
         ideal_example: ""
       };
+    }
+
+    // Fire outgoing webhooks (best-effort, non-blocking failures)
+    if (workspaceId) {
+      dispatchWebhooks(workspaceId, "analysis.completed", {
+        mode,
+        input_type: inputType,
+        website_url: websiteUrl ?? null,
+        search_query: searchQuery,
+        score: analysisResult.score,
+        sub_scores: analysisResult.sub_scores,
+        action_plan: analysisResult.action_plan,
+        keywords_analysis: analysisResult.keywords_analysis,
+        summary: analysisResult.summary,
+        source: "app",
+      }).catch((e) => console.error("Webhook dispatch error:", e));
     }
 
     return new Response(
