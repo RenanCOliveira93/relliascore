@@ -51,7 +51,56 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 
-export function generateBrandPdf(result: BrandAnalysisResult, mode: string): void {
+function extractFirstName(result: BrandAnalysisResult, sources: { website?: string; linkedin?: string; instagram?: string; description?: string }): string {
+  // 1. Try Instagram handle (often the cleanest brand/profile name)
+  if (sources.instagram) {
+    const m = sources.instagram.match(/instagram\.com\/([^\/?#]+)/i) || sources.instagram.match(/^@?([a-zA-Z0-9._-]+)$/);
+    if (m && m[1]) return capitalize(m[1].split(/[._-]/)[0]);
+  }
+  // 2. LinkedIn slug
+  if (sources.linkedin) {
+    const m = sources.linkedin.match(/linkedin\.com\/(?:in|company)\/([^\/?#]+)/i);
+    if (m && m[1]) return capitalize(m[1].split(/[._-]/)[0]);
+  }
+  // 3. Website hostname
+  if (sources.website) {
+    try {
+      const url = new URL(sources.website.startsWith("http") ? sources.website : `https://${sources.website}`);
+      const host = url.hostname.replace(/^www\./, "");
+      return capitalize(host.split(".")[0]);
+    } catch {}
+  }
+  // 4. First word of description
+  if (sources.description) {
+    const word = sources.description.trim().split(/\s+/)[0];
+    if (word) return capitalize(word.replace(/[^a-zA-Z0-9À-ÿ]/g, ""));
+  }
+  // 5. First word of nicho
+  if (result.nicho) {
+    const word = result.nicho.trim().split(/\s+/)[0];
+    if (word) return capitalize(word.replace(/[^a-zA-Z0-9À-ÿ]/g, ""));
+  }
+  return "Marca";
+}
+
+function capitalize(s: string): string {
+  if (!s) return "Marca";
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function sanitizeFilename(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-");
+}
+
+export function generateBrandPdf(
+  result: BrandAnalysisResult,
+  mode: string,
+  sources: { website?: string; linkedin?: string; instagram?: string; description?: string } = {}
+): void {
   const doc = new jsPDF("p", "mm", "a4");
   const pageWidth = 210;
   const margin = 15;
@@ -243,5 +292,9 @@ export function generateBrandPdf(result: BrandAnalysisResult, mode: string): voi
     doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, 290, { align: "right" });
   }
 
-  doc.save(`rellia-marca-${new Date().toISOString().slice(0, 10)}.pdf`);
+  // ====== FILE NAME: Rellia-Marca-{PrimeiroNome}-{Data}.pdf ======
+  const profileName = extractFirstName(result, sources);
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = sanitizeFilename(`Rellia-Marca-${profileName}-${date}.pdf`);
+  doc.save(filename);
 }

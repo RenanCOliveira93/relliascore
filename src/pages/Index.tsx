@@ -38,6 +38,7 @@ const Index = () => {
   const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
   const [brandMode, setBrandMode] = useState<AnalysisMode>("business");
   const [brandHistoryKey, setBrandHistoryKey] = useState(0);
+  const [brandSources, setBrandSources] = useState<{ website?: string; linkedin?: string; instagram?: string; description?: string }>({});
 
   const { toast } = useToast();
   const { signOut, user } = useAuth();
@@ -129,6 +130,12 @@ const Index = () => {
     setIsBrandAnalyzing(true);
     setBrandResult(null);
     setBrandMode(data.mode);
+    setBrandSources({
+      website: data.website,
+      linkedin: data.linkedin,
+      instagram: data.instagram,
+      description: data.description,
+    });
     try {
       const allowed = await incrementUsage();
       if (!allowed) throw new Error("Limite de análises atingido.");
@@ -355,6 +362,34 @@ const Index = () => {
                       <Button variant="outline" onClick={handleReset}>Nova Análise</Button>
                     </div>
                   </div>
+
+                  {/* Pinned: input that generated this analysis */}
+                  <Card className="border-primary/30 bg-primary/5 backdrop-blur-md">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2 text-primary">
+                        <Search className="h-4 w-4" />
+                        {inputType === "webpage" ? "Análise gerada a partir de" : "Texto analisado"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-3 text-sm">
+                      {inputType === "webpage" ? (
+                        <div>
+                          <span className="text-xs uppercase tracking-wider text-muted-foreground">URL</span>
+                          <p className="text-foreground/90 mt-0.5 break-all">{websiteUrl}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="text-xs uppercase tracking-wider text-muted-foreground">Conteúdo</span>
+                          <p className="text-foreground/90 mt-0.5 whitespace-pre-wrap line-clamp-6">{textContent}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-xs uppercase tracking-wider text-muted-foreground">Pesquisa / Pergunta</span>
+                        <p className="text-foreground/90 mt-0.5 italic whitespace-pre-wrap">"{searchQuery}"</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   <ScoreDisplay result={result} />
                 </div>
               )}
@@ -395,7 +430,7 @@ const Index = () => {
                     <h2 className="text-2xl font-bold">Diagnóstico da Marca</h2>
                     <Button variant="outline" onClick={handleBrandReset}>Nova Análise</Button>
                   </div>
-                  <BrandAnalysisResults result={brandResult} mode={brandMode} />
+                  <BrandAnalysisResults result={brandResult} mode={brandMode} sources={brandSources} />
                 </div>
               )}
             </TabsContent>
