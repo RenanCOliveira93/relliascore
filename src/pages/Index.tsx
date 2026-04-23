@@ -73,7 +73,7 @@ const Index = () => {
         const allowed = await incrementUsage();
         if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage" }
+          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null }
         });
         if (error) throw error;
         if (data.error) throw new Error(data.error);
@@ -96,7 +96,7 @@ const Index = () => {
         const allowed = await incrementUsage();
         if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text" }
+          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null }
         });
         if (error) throw error;
         if (data.error) throw new Error(data.error);
@@ -133,7 +133,7 @@ const Index = () => {
       const allowed = await incrementUsage();
       if (!allowed) throw new Error("Limite de análises atingido.");
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
-        body: data
+        body: { ...data, workspaceId: activeWorkspace?.id ?? null }
       });
       if (error) throw error;
       if (result.error) throw new Error(result.error);

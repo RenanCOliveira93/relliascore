@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Building2, ChevronDown, Plus, Settings } from "lucide-react";
+import { Building2, ChevronDown, Plus, Settings, Webhook } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const WorkspaceSwitcher = () => {
@@ -65,6 +65,10 @@ const WorkspaceSwitcher = () => {
           <DropdownMenuItem onClick={() => navigate("/workspaces")}>
             <Settings className="h-4 w-4 mr-2" />
             Gerenciar Espaços
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/integrations")}>
+            <Webhook className="h-4 w-4 mr-2" />
+            Integrações & API
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
