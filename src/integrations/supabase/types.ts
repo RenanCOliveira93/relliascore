@@ -157,6 +157,106 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_api_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_webhooks: {
+        Row: {
+          created_at: string
+          events: string[]
+          failure_count: number
+          id: string
+          is_active: boolean
+          last_error: string | null
+          last_triggered_at: string | null
+          name: string
+          secret: string | null
+          success_count: number
+          url: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          events?: string[]
+          failure_count?: number
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_triggered_at?: string | null
+          name: string
+          secret?: string | null
+          success_count?: number
+          url: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          events?: string[]
+          failure_count?: number
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_triggered_at?: string | null
+          name?: string
+          secret?: string | null
+          success_count?: number
+          url?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_webhooks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspaces: {
         Row: {
           created_at: string
@@ -189,6 +289,18 @@ export type Database = {
       increment_analysis_usage: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      record_webhook_delivery: {
+        Args: { p_error?: string; p_success: boolean; p_webhook_id: string }
+        Returns: undefined
+      }
+      validate_api_key: {
+        Args: { p_key_hash: string }
+        Returns: {
+          key_id: string
+          user_id: string
+          workspace_id: string
+        }[]
       }
     }
     Enums: {
