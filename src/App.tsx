@@ -9,6 +9,7 @@ import { SubscriptionProvider } from "@/hooks/useSubscription";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Index from "./pages/Index";
 import Workspaces from "./pages/Workspaces";
 import Pricing from "./pages/Pricing";
@@ -29,6 +30,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/home" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
