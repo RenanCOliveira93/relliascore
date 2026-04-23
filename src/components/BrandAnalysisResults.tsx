@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MessageSquare, Target, Layers, Palette, FileText, Tag, Lightbulb,
-  TrendingUp, TrendingDown, Crosshair, Sparkles, BarChart3, Monitor, CheckCircle, FileDown
+  TrendingUp, TrendingDown, Crosshair, Sparkles, BarChart3, Monitor, CheckCircle, FileDown,
+  Search, Globe, Linkedin, Instagram
 } from "lucide-react";
 import type { BrandAnalysisResult } from "@/types/brand-analysis";
 import { generateBrandPdf } from "@/lib/generateBrandPdf";
@@ -13,9 +14,15 @@ import { useEffect, useState } from "react";
 interface BrandAnalysisResultsProps {
   result: BrandAnalysisResult;
   mode?: string;
+  sources?: {
+    website?: string;
+    linkedin?: string;
+    instagram?: string;
+    description?: string;
+  };
 }
 
-const BrandAnalysisResults = ({ result, mode = "business" }: BrandAnalysisResultsProps) => {
+const BrandAnalysisResults = ({ result, mode = "business", sources = {} }: BrandAnalysisResultsProps) => {
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
@@ -51,11 +58,51 @@ const BrandAnalysisResults = ({ result, mode = "business" }: BrandAnalysisResult
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Pinned analysis context (input data the user provided) */}
+      {(sources.description || sources.website || sources.linkedin || sources.instagram) && (
+        <Card className="border-primary/30 bg-primary/5 backdrop-blur-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2 text-primary">
+              <Search className="h-4 w-4" />
+              Dados analisados
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-2 text-sm">
+            {sources.description && (
+              <div>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Descrição</span>
+                <p className="text-foreground/90 mt-0.5 whitespace-pre-wrap">{sources.description}</p>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-3 pt-1">
+              {sources.website && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Globe className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-[220px]">{sources.website}</span>
+                </span>
+              )}
+              {sources.linkedin && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Linkedin className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-[220px]">{sources.linkedin}</span>
+                </span>
+              )}
+              {sources.instagram && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Instagram className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-[220px]">{sources.instagram}</span>
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Export PDF Button */}
       <div className="flex justify-end">
         <Button
           variant="outline"
-          onClick={() => generateBrandPdf(result, mode)}
+          onClick={() => generateBrandPdf(result, mode, sources)}
           className="gap-2"
         >
           <FileDown className="h-4 w-4" />
