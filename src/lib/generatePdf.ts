@@ -463,5 +463,41 @@ export function generateAnalysisPdf(
     doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, 290, { align: "right" });
   }
 
-  doc.save(`llm-score-${new Date().toISOString().slice(0, 10)}.pdf`);
+  // ====== FILE NAME: Rellia-{Tipo}-{PrimeiroNome}-{Data}.pdf ======
+  const tipo = "Relevancia";
+  const profileName = extractProfileName(websiteUrl);
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = sanitizeFilename(`Rellia-${tipo}-${profileName}-${date}.pdf`);
+  doc.save(filename);
+}
+
+function extractProfileName(source: string): string {
+  if (!source) return "Analise";
+  // Try to extract a meaningful name from a URL
+  try {
+    const url = new URL(source.startsWith("http") ? source : `https://${source}`);
+    const host = url.hostname.replace(/^www\./, "");
+    const first = host.split(".")[0];
+    if (first && first.length > 0) {
+      return capitalize(first);
+    }
+  } catch {
+    // not a URL — use the first word of the source text
+    const firstWord = source.trim().split(/\s+/)[0] || "Analise";
+    return capitalize(firstWord.replace(/[^a-zA-Z0-9À-ÿ]/g, ""));
+  }
+  return "Analise";
+}
+
+function capitalize(s: string): string {
+  if (!s) return "Analise";
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function sanitizeFilename(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip accents
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-");
 }
