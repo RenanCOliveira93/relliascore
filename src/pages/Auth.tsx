@@ -233,6 +233,55 @@ const Auth = () => {
           Ao continuar, você concorda com nossos Termos de Uso e Política de Privacidade.
         </p>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
+          <DialogHeader>
+            <div className="mx-auto h-14 w-14 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mb-2">
+              {forgotSent ? <MailCheck className="h-7 w-7 text-primary" /> : <KeyRound className="h-7 w-7 text-primary" />}
+            </div>
+            <DialogTitle className="text-center text-xl">
+              {forgotSent ? "E-mail enviado! 📧" : "Recuperar senha"}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {forgotSent
+                ? `Enviamos um link de recuperação para ${forgotEmail}. Verifique sua caixa de entrada e a pasta de spam.`
+                : "Informe seu e-mail e enviaremos um link para você criar uma nova senha."}
+            </DialogDescription>
+          </DialogHeader>
+          {!forgotSent ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  required
+                  className="bg-input/50"
+                />
+              </div>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button type="button" variant="outline" onClick={() => setForgotOpen(false)} disabled={forgotLoading}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={forgotLoading}>
+                  {forgotLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Enviar link
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <DialogFooter>
+              <Button onClick={() => setForgotOpen(false)} className="w-full">
+                Entendi
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
