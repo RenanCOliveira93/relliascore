@@ -183,6 +183,15 @@ const Auth = () => {
                         </button>
                       </div>
                     </div>
+                    <div className="text-right -mt-2">
+                      <button
+                        type="button"
+                        onClick={() => { setForgotEmail(email); setForgotSent(false); setForgotOpen(true); }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Esqueceu a senha?
+                      </button>
+                    </div>
                     <Button type="submit" className="w-full h-11" disabled={isLoading}>
                       {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Entrar
