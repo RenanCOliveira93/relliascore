@@ -14,6 +14,9 @@ import Index from "./pages/Index";
 import Workspaces from "./pages/Workspaces";
 import Pricing from "./pages/Pricing";
 import Integrations from "./pages/Integrations";
+import Empresas from "./pages/Empresas";
+import Concorrentes from "./pages/Concorrentes";
+import Historico from "./pages/Historico";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +37,9 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/home" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/workspaces" element={<ProtectedRoute><Workspaces /></ProtectedRoute>} />
+              <Route path="/empresas" element={<ProtectedRoute><Empresas /></ProtectedRoute>} />
+              <Route path="/concorrentes" element={<ProtectedRoute><Concorrentes /></ProtectedRoute>} />
+              <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
               <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
