@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Search, Globe, Sparkles, FileDown, LogOut, Scan, Lock, Crown } from "lucide-react";
 import WorkspaceSwitcher from "@/components/WorkspaceSwitcher";
+import NotificationBell from "@/components/NotificationBell";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Badge } from "@/components/ui/badge";
@@ -208,6 +209,7 @@ const Index = () => {
                   )}
                 </Badge>
                 <WorkspaceSwitcher />
+                <NotificationBell />
                 <Button variant="ghost" size="sm" onClick={signOut} className="gap-2 text-muted-foreground">
                   <LogOut className="h-4 w-4" />
                   Sair
