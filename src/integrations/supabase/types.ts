@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      analises: {
+        Row: {
+          action_plan: Json | null
+          created_at: string
+          dados_marca: Json | null
+          empresa_id: string | null
+          id: string
+          keywords_analysis: Json | null
+          origem: string
+          score: number | null
+          sub_scores: Json | null
+          summary: string | null
+          tipo: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          action_plan?: Json | null
+          created_at?: string
+          dados_marca?: Json | null
+          empresa_id?: string | null
+          id?: string
+          keywords_analysis?: Json | null
+          origem?: string
+          score?: number | null
+          sub_scores?: Json | null
+          summary?: string | null
+          tipo: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          action_plan?: Json | null
+          created_at?: string
+          dados_marca?: Json | null
+          empresa_id?: string | null
+          id?: string
+          keywords_analysis?: Json | null
+          origem?: string
+          score?: number | null
+          sub_scores?: Json | null
+          summary?: string | null
+          tipo?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analises_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analises_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analises_competitivas: {
+        Row: {
+          concorrente_id: string
+          created_at: string
+          empresa_id: string | null
+          id: string
+          score: number | null
+          sub_scores: Json | null
+          summary: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          concorrente_id: string
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          score?: number | null
+          sub_scores?: Json | null
+          summary?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          concorrente_id?: string
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          score?: number | null
+          sub_scores?: Json | null
+          summary?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analises_competitivas_concorrente_id_fkey"
+            columns: ["concorrente_id"]
+            isOneToOne: false
+            referencedRelation: "concorrentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analises_competitivas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analises_competitivas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_analyses: {
         Row: {
           created_at: string
@@ -61,10 +182,115 @@ export type Database = {
           },
         ]
       }
+      concorrentes: {
+        Row: {
+          created_at: string
+          empresa_id: string | null
+          id: string
+          nome: string
+          search_query: string
+          url: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          nome: string
+          search_query: string
+          url: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          nome?: string
+          search_query?: string
+          url?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concorrentes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concorrentes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          analise_marca_ativa: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          instagram_url: string | null
+          linkedin_url: string | null
+          monitoramento_ativo: boolean
+          nome: string
+          search_query: string
+          updated_at: string
+          url: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          analise_marca_ativa?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          monitoramento_ativo?: boolean
+          nome: string
+          search_query: string
+          updated_at?: string
+          url: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          analise_marca_ativa?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          monitoramento_ativo?: boolean
+          nome?: string
+          search_query?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           analysis_mode: string | null
           analysis_result: Json | null
+          convertido: boolean
           created_at: string
           email: string
           id: string
@@ -72,11 +298,14 @@ export type Database = {
           phone: string | null
           score: number | null
           search_query: string | null
+          sub_scores: Json | null
+          summary: string | null
           website_url: string | null
         }
         Insert: {
           analysis_mode?: string | null
           analysis_result?: Json | null
+          convertido?: boolean
           created_at?: string
           email: string
           id?: string
@@ -84,11 +313,14 @@ export type Database = {
           phone?: string | null
           score?: number | null
           search_query?: string | null
+          sub_scores?: Json | null
+          summary?: string | null
           website_url?: string | null
         }
         Update: {
           analysis_mode?: string | null
           analysis_result?: Json | null
+          convertido?: boolean
           created_at?: string
           email?: string
           id?: string
@@ -96,9 +328,119 @@ export type Database = {
           phone?: string | null
           score?: number | null
           search_query?: string | null
+          sub_scores?: Json | null
+          summary?: string | null
           website_url?: string | null
         }
         Relationships: []
+      }
+      notificacoes: {
+        Row: {
+          created_at: string
+          dados: Json | null
+          id: string
+          lida: boolean
+          mensagem: string
+          tipo: string
+          titulo: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          dados?: Json | null
+          id?: string
+          lida?: boolean
+          mensagem: string
+          tipo: string
+          titulo: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          dados?: Json | null
+          id?: string
+          lida?: boolean
+          mensagem?: string
+          tipo?: string
+          titulo?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificacoes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plano_de_acao: {
+        Row: {
+          action: string
+          analise_id: string | null
+          category: string | null
+          concluida: boolean
+          created_at: string
+          empresa_id: string | null
+          id: string
+          impact: string | null
+          priority: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          analise_id?: string | null
+          category?: string | null
+          concluida?: boolean
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          impact?: string | null
+          priority: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          analise_id?: string | null
+          category?: string | null
+          concluida?: boolean
+          created_at?: string
+          empresa_id?: string | null
+          id?: string
+          impact?: string | null
+          priority?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_de_acao_analise_id_fkey"
+            columns: ["analise_id"]
+            isOneToOne: false
+            referencedRelation: "analises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_de_acao_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_de_acao_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -259,24 +601,36 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          analise_competitiva_ativa: boolean
+          analise_marca_ativa: boolean
           created_at: string
           id: string
           logo_url: string | null
+          monitoramento_ativo: boolean
           name: string
+          score_alert_threshold: number
           user_id: string
         }
         Insert: {
+          analise_competitiva_ativa?: boolean
+          analise_marca_ativa?: boolean
           created_at?: string
           id?: string
           logo_url?: string | null
+          monitoramento_ativo?: boolean
           name: string
+          score_alert_threshold?: number
           user_id: string
         }
         Update: {
+          analise_competitiva_ativa?: boolean
+          analise_marca_ativa?: boolean
           created_at?: string
           id?: string
           logo_url?: string | null
+          monitoramento_ativo?: boolean
           name?: string
+          score_alert_threshold?: number
           user_id?: string
         }
         Relationships: []
