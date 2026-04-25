@@ -89,6 +89,33 @@ serve(async (req) => {
     apikey: serviceKey,
   };
 
+  // Helper: tenta achar empresa do workspace por URL aproximada
+  const findEmpresaIdByUrl = async (rawUrl?: string | null): Promise<string | null> => {
+    if (!rawUrl) return null;
+    try {
+      const host = new URL(
+        rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`,
+      ).hostname.replace(/^www\./, "");
+      const { data } = await admin
+        .from("empresas")
+        .select("id, url")
+        .eq("workspace_id", workspace_id);
+      const match = (data ?? []).find((e: any) => {
+        try {
+          const h = new URL(
+            e.url.startsWith("http") ? e.url : `https://${e.url}`,
+          ).hostname.replace(/^www\./, "");
+          return h === host;
+        } catch {
+          return false;
+        }
+      });
+      return match?.id ?? null;
+    } catch {
+      return null;
+    }
+  };
+
   if (action === "analyze") {
     const res = await fetch(`${FUNCTIONS_BASE}/analyze-relevance`, {
       method: "POST",
@@ -98,22 +125,46 @@ serve(async (req) => {
     const data = await res.json();
     if (!res.ok) return json(res.status, data);
 
-    // persist to history
-    const insertBody: any = {
-      user_id,
-      workspace_id,
-      mode: body.mode ?? "business",
-      input_type: body.inputType ?? "webpage",
-      website_url: body.websiteUrl ?? null,
-      search_query: body.searchQuery ?? "",
-      score: data.score ?? null,
-      result: data,
-      source: "api",
-    };
-    // best-effort insert (table may not have all columns); we use brand-style minimal
-    // Skipping insert if analysis_history table doesn't exist — webhooks still fire.
+    const empresa_id = await findEmpresaIdByUrl(body.websiteUrl);
+
+    // Persist analise (conteudo)
+    const { data: analiseRow } = await admin
+      .from("analises")
+      .insert({
+        user_id,
+        workspace_id,
+        empresa_id,
+        tipo: "conteudo",
+        score: data.score ?? null,
+        summary: data.summary ?? null,
+        sub_scores: data.sub_scores ?? null,
+        keywords_analysis: data.keywords_analysis ?? null,
+        action_plan: data.action_plan ?? null,
+        origem: "webhook_api",
+      })
+      .select("id")
+      .single();
+
+    // Bulk insert do plano de ação
+    if (analiseRow?.id && Array.isArray(data.action_plan)) {
+      const items = data.action_plan
+        .filter((i: any) => i?.action && i?.priority)
+        .map((i: any) => ({
+          user_id,
+          workspace_id,
+          empresa_id,
+          analise_id: analiseRow.id,
+          priority: i.priority,
+          action: i.action,
+          impact: i.impact ?? null,
+          category: i.category ?? null,
+        }));
+      if (items.length > 0) await admin.from("plano_de_acao").insert(items);
+    }
 
     await dispatchWebhooks(workspace_id, "analysis.completed", {
+      analise_id: analiseRow?.id ?? null,
+      empresa_id,
       mode: body.mode ?? "business",
       input_type: body.inputType ?? "webpage",
       website_url: body.websiteUrl ?? null,
@@ -138,7 +189,9 @@ serve(async (req) => {
     const data = await res.json();
     if (!res.ok) return json(res.status, data);
 
-    // Persist brand analysis to history
+    const empresa_id = await findEmpresaIdByUrl(body.website);
+
+    // Mantém a tabela legada brand_analyses
     await admin.from("brand_analyses").insert({
       user_id,
       workspace_id,
@@ -150,7 +203,30 @@ serve(async (req) => {
       result: data,
     });
 
+    // E grava também em analises (tipo=marca) para histórico unificado
+    const { data: analiseRow } = await admin
+      .from("analises")
+      .insert({
+        user_id,
+        workspace_id,
+        empresa_id,
+        tipo: "marca",
+        score: data.consistencia_score ?? null,
+        summary: data.resumo_marca ?? null,
+        dados_marca: {
+          consistencia_score: data.consistencia_score,
+          tom_de_voz: data.tom_de_voz,
+          publico_alvo: data.publico_alvo,
+          recomendacoes: data.recomendacoes,
+        },
+        origem: "webhook_api",
+      })
+      .select("id")
+      .single();
+
     await dispatchWebhooks(workspace_id, "brand_analysis.completed", {
+      analise_id: analiseRow?.id ?? null,
+      empresa_id,
       mode: body.mode ?? "business",
       website: body.website ?? null,
       linkedin: body.linkedin ?? null,
