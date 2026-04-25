@@ -238,6 +238,32 @@ const Integrations = () => {
             <p className="text-muted-foreground">Selecione um espaço de trabalho.</p>
           ) : (
             <Tabs defaultValue="keys" className="space-y-6">
+              <Card className="bg-card/40 backdrop-blur-md border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-base">Identificadores deste espaço</CardTitle>
+                  <CardDescription>
+                    Forneça estes IDs ao time RELLIA para configurar suas automações no n8n.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-32 shrink-0">Workspace ID</span>
+                    <code className="flex-1 text-xs bg-background/40 px-2 py-1 rounded border border-border/50 truncate">
+                      {activeWorkspace.id}
+                    </code>
+                    <Button size="icon" variant="ghost" onClick={() => copy(activeWorkspace.id)}>
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-32 shrink-0">Nome</span>
+                    <code className="flex-1 text-xs bg-background/40 px-2 py-1 rounded border border-border/50 truncate">
+                      {activeWorkspace.name}
+                    </code>
+                  </div>
+                </CardContent>
+              </Card>
+
               <TabsList>
                 <TabsTrigger value="keys" className="gap-2">
                   <KeyRound className="h-4 w-4" /> API Keys
