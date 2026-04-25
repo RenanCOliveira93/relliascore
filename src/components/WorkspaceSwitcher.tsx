@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Building2, ChevronDown, Plus, Settings, Webhook } from "lucide-react";
+import { Building2, ChevronDown, Plus, Settings, Webhook, Briefcase, Swords, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const WorkspaceSwitcher = () => {
@@ -62,6 +62,19 @@ const WorkspaceSwitcher = () => {
             <Plus className="h-4 w-4 mr-2" />
             Novo Espaço
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/empresas")}>
+            <Briefcase className="h-4 w-4 mr-2" />
+            Empresas
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/concorrentes")}>
+            <Swords className="h-4 w-4 mr-2" />
+            Concorrentes
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/historico")}>
+            <History className="h-4 w-4 mr-2" />
+            Histórico
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => navigate("/workspaces")}>
             <Settings className="h-4 w-4 mr-2" />
             Gerenciar Espaços
