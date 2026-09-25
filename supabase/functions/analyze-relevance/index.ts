@@ -244,30 +244,43 @@ Faça a análise completa usando a função fornecida.`;
   };
 
   // Persist successful member-area analyses (public-api persists its own calls). Failures never reach here.
+  // A history failure never discards the user's result, but is always logged (never silent).
+  if (auth.kind === "user" && userId && !workspaceId) log("persist_skipped", { reason: "no_workspace" });
   if (auth.kind === "user" && workspaceId && userId) {
     try {
       let empresaId: string | null = null;
-      const host = (() => { try { return new URL(String(sourceMeta.final_url ?? websiteUrl)).hostname.replace(/^www\./, ""); } catch { return null; } })();
+      const host = inputType !== "webpage" ? null : (() => { try { return new URL(String(sourceMeta.final_url ?? websiteUrl)).hostname.replace(/^www\./, ""); } catch { return null; } })();
       if (host) {
         const { data: emps } = await admin.from("empresas").select("id,url").eq("workspace_id", workspaceId);
         empresaId = (emps ?? []).find((e: any) => { try { return new URL(/^https?:/i.test(e.url) ? e.url : `https://${e.url}`).hostname.replace(/^www\./, "") === host; } catch { return false; } })?.id ?? null;
       }
       const row = buildAnaliseRow(result, {
-        userId, workspaceId, empresaId, origem: "app", inputType, mode, searchQuery,
+        userId, workspaceId, empresaId, origem: "app", inputType, mode, searchQuery, requestId: clientRequestId,
         websiteUrl: inputType === "webpage" ? String(sourceMeta.final_url ?? websiteUrl) : null,
       });
-      const { data: saved, error: saveErr } = row ? await admin.from("analises").insert(row).select("id").single() : { data: null, error: { code: "invalid_row" } };
-      if (saveErr || !saved) log("persist_failed", { code: saveErr?.code });
+      if (!row) log("persist_failed", { reason: "invalid_row" });
       else {
-        result.analysis_id = saved.id;
-        const items = (r.action_plan ?? []).filter((i: any) => i?.action && i?.priority).map((i: any) => ({
-          user_id: userId, workspace_id: workspaceId, empresa_id: empresaId, analise_id: saved.id,
-          priority: i.priority, action: i.action, impact: i.impact ?? null, category: i.category ?? null, affected_dimension: i.affected_dimension ?? null,
-        }));
-        if (items.length) await admin.from("plano_de_acao").insert(items);
-        log("persisted");
+        const { data: saved, error: saveErr } = await admin.from("analises").insert(row).select("id").single();
+        if (saveErr?.code === "23505" && clientRequestId) {
+          const { data: existing } = await admin.from("analises").select("id").eq("user_id", userId).eq("request_id", clientRequestId).maybeSingle();
+          if (existing) result.analysis_id = existing.id;
+          log("persist_duplicate_ignored");
+        } else if (saveErr || !saved) {
+          log("persist_failed", { code: saveErr?.code ?? null, message: saveErr?.message?.slice(0, 200) ?? null });
+        } else {
+          result.analysis_id = saved.id;
+          const items = (r.action_plan ?? []).filter((i: any) => i?.action && i?.priority).map((i: any) => ({
+            user_id: userId, workspace_id: workspaceId, empresa_id: empresaId, analise_id: saved.id,
+            priority: i.priority, action: i.action, impact: i.impact ?? null, category: i.category ?? null, affected_dimension: i.affected_dimension ?? null,
+          }));
+          if (items.length) {
+            const { error: planErr } = await admin.from("plano_de_acao").insert(items);
+            if (planErr) log("persist_plan_failed", { code: planErr.code });
+          }
+          log("persisted", { analysis_id: saved.id, input_type: inputType });
+        }
       }
-    } catch { log("persist_failed"); }
+    } catch (e) { log("persist_failed", { name: (e as Error)?.name, message: String((e as Error)?.message ?? "").slice(0, 200) }); }
   }
 
   if (auth.kind === "user" && workspaceId) {
