@@ -243,7 +243,7 @@ const BrandProfile = () => {
         </div>
       </section>
 
-      <Section title="Visual geral da marca".replace("Visual", "Visão")>
+      <Section title="Visão geral da marca">
         <div>{SUMMARY_FIELDS.map(summaryRow)}</div>
       </Section>
 
