@@ -16,6 +16,8 @@ import TechnicalGeoAudit, { pageTypeLabel } from "@/components/TechnicalGeoAudit
 import CompatibilityDiagnostic from "@/components/CompatibilityDiagnostic";
 import { missingSnapshotParts } from "@/lib/diagnosis";
 import { Bar, Confidence, Help, Pill, Section, TONE_TEXT } from "./primitives";
+import BrandAlignmentSection from "./BrandAlignmentSection";
+import { BRAND_ALIGNMENT_TOOLTIP, CONTENT_SCORE_TOOLTIP, interpretScores, isBrandAware } from "@/lib/brand-alignment-view";
 
 export interface DiagnosisContext { source?: string; query?: string; inputType?: "webpage" | "text" }
 
@@ -75,6 +77,9 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
   const optimized = sanitizeOptimized(r.ideal_example);
   const [copied, setCopied] = useState(false);
   const tone = toneOf(score);
+  const brandAware = isBrandAware(r);
+  const brandScore = brandAware && typeof r.brand_alignment_score === "number" ? Math.round(r.brand_alignment_score) : null;
+  const brandOptimized = sanitizeOptimized(r.brand_optimized_version ?? undefined);
 
   const copy = async () => {
     await navigator.clipboard.writeText(optimized);
@@ -91,22 +96,46 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
       <section className="rounded-xl border border-border bg-card/80 backdrop-blur-md p-6 sm:p-8">
         <div className="grid gap-6 md:grid-cols-[auto,1fr] md:items-center">
           <div className="text-center md:text-left md:pr-8 md:border-r md:border-border">
-            <p className="inline-flex items-center gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">RELLIA Content Score</span><Help text={SCORE_HELP} /></p>
-            <p className={`text-7xl sm:text-8xl font-bold tabular-nums leading-none mt-2 ${TONE_TEXT[tone]}`}>{animated}</p>
+            <div className={brandAware ? "grid grid-cols-1 sm:grid-cols-2 gap-6" : ""} data-testid="score-pair">
+              <div>
+                <p className="inline-flex items-center gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">{brandAware ? "Content Score" : "RELLIA Content Score"}</span><Help text={brandAware ? `${CONTENT_SCORE_TOOLTIP} ${SCORE_HELP}` : SCORE_HELP} /></p>
+                <p className={`text-7xl sm:text-8xl font-bold tabular-nums leading-none mt-2 ${TONE_TEXT[tone]}`}>{animated}</p>
+              </div>
+              {brandAware && (
+                <div data-testid="brand-alignment-score">
+                  <p className="inline-flex items-center gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">Brand Alignment</span><Help text={BRAND_ALIGNMENT_TOOLTIP} /></p>
+                  <p className={`text-7xl sm:text-8xl font-bold tabular-nums leading-none mt-2 ${brandScore === null ? TONE_TEXT.neutral : TONE_TEXT[toneOf(brandScore)]}`}>{brandScore ?? "N/D"}</p>
+                </div>
+              )}
+            </div>
             <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2">
               <Pill>Score 2.0</Pill>
               {isText && <Pill>Análise de conteúdo</Pill>}
               {r.content_score_partial && <span className="inline-flex items-center gap-1"><Pill>Score parcial</Pill><Help text={PARTIAL_HELP} /></span>}
+              {brandAware && r.brand_alignment_partial && <Pill>Brand Alignment parcial</Pill>}
             </div>
           </div>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             {!isText && context.source && <div className="sm:col-span-2 min-w-0"><dt className="text-xs text-muted-foreground">Página analisada</dt><dd className="break-all text-foreground/90">{context.source}</dd></div>}
             {context.query && <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">Intenção analisada</dt><dd className="italic text-foreground/90">"{context.query}"</dd></div>}
+            {brandAware && (
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground" data-testid="brand-context-header">
+                <span>Empresa: <span className="text-foreground/90">{r.brand_context_snapshot!.company_name ?? "—"}</span></span>
+                <span>Brand Brain: <span className="text-foreground/90">v{r.brand_context_snapshot!.brand_brain_version}</span></span>
+                <Pill tone="positive">Brand-aware</Pill>
+              </div>
+            )}
+            {!brandAware && r.brand_context_status === "no_brand_brain" && <p className="sm:col-span-2 text-xs text-muted-foreground">Empresa sem Brand Profile: análise feita sem contexto de marca.</p>}
+            {!brandAware && r.brand_context_status === "failed" && <p className="sm:col-span-2 text-xs text-muted-foreground">Não foi possível avaliar o alinhamento com a marca desta vez. O Content Score não foi afetado.</p>}
             {r.technical_geo && <div><dt className="text-xs text-muted-foreground">Tipo de página</dt><dd>{pageTypeLabel(r.technical_geo.page_type.page_type)}</dd></div>}
             {r.technical_geo && <div><dt className="text-xs text-muted-foreground">Technical GEO Coverage</dt><dd className="text-muted-foreground">{Math.round(r.technical_geo.coverage * 100)}%</dd></div>}
           </dl>
         </div>
       </section>
+
+      {brandAware && interpretScores(score, brandScore) && (
+        <p className="text-sm text-muted-foreground px-1" data-testid="score-interpretation">{interpretScores(score, brandScore)}</p>
+      )}
 
       {/* 2. Diagnóstico */}
       <Section title="Diagnóstico">
@@ -161,6 +190,8 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
           </Collapsible>
         )}
       </Section>
+
+      {brandAware && <BrandAlignmentSection r={r} />}
 
       {/* 4. Prioridades */}
       <Section title="O que corrigir primeiro" lead={priorities.length ? `As ${priorities.length} ações com maior prioridade.` : undefined}>
@@ -316,9 +347,20 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
           <AccordionItem value="optimized" className="rounded-xl border border-border bg-card/70 px-5">
             <AccordionTrigger className="text-left">{isText ? "Ver texto otimizado" : "Ver versão otimizada"}</AccordionTrigger>
             <AccordionContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">Esta versão aplica as recomendações identificadas nesta análise. Na futura etapa Brand Intelligence, ela também utilizará o posicionamento, tom de voz e territórios estratégicos da marca.{!isText && " Use como referência: não é necessário substituir a página inteira."}</p>
+              <p className="text-xs text-muted-foreground">Esta versão aplica as recomendações identificadas nesta análise. {brandAware ? "A versão com contexto de marca está logo abaixo." : "Selecione uma empresa com Brand Profile para gerar também uma versão alinhada à marca."}{!isText && " Use como referência: não é necessário substituir a página inteira."}</p>
               <div className="flex justify-end"><Button size="sm" variant="outline" onClick={copy} className="gap-2">{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}Copiar</Button></div>
               <div className="rounded-lg border border-border bg-background/40 p-4"><p className="text-sm leading-relaxed whitespace-pre-wrap">{optimized}</p></div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {brandOptimized && (
+          <AccordionItem value="brand-optimized" className="rounded-xl border border-border bg-card/70 px-5">
+            <AccordionTrigger className="text-left">{isText ? "Ver texto otimizado com a marca" : "Ver versão otimizada com a marca"}</AccordionTrigger>
+            <AccordionContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">Usa o posicionamento, produtos, diferenciais, claims e voz registrados no Brand Profile (v{r.brand_context_snapshot?.brand_brain_version}). Não adiciona números, clientes, cases ou resultados que não estejam no conteúdo ou no perfil.{!isText && " Use como exemplo de melhoria, não como substituição integral da página."}</p>
+              <div className="flex justify-end"><Button size="sm" variant="outline" onClick={async () => { await navigator.clipboard.writeText(brandOptimized); toast.success("Texto copiado"); }} className="gap-2"><Copy className="h-4 w-4" />Copiar</Button></div>
+              <div className="rounded-lg border border-border bg-background/40 p-4"><p className="text-sm leading-relaxed whitespace-pre-wrap">{brandOptimized}</p></div>
             </AccordionContent>
           </AccordionItem>
         )}
