@@ -2,3 +2,4 @@
 - Analyses without `score_version` are legacy and are never recalculated or compared numerically with 2.0 — preserves history integrity.
 - Technical GEO is a versioned deterministic ruleset in `supabase/functions/_shared/technical-geo.ts` (TECHNICAL_GEO_RULESET_V1, heuristic_weights_v1); score = earned/applicable points, not_applicable and unavailable excluded, coverage kept separate — page-type-aware and auditable.
 - Successful analyses are persisted via `_shared/persist.ts` `buildAnaliseRow` (app → origem "app", API → "webhook_api"); failures never become history rows — one row shape for all entry points.
+- Score 2.0 diagnosis presentation logic lives in `src/lib/diagnosis.ts` (pure, reads persisted fields incl. `weights_applied`, never recalculates with hardcoded weights); UI tests run with `bun test tests/` — keeps the UI auditable and separate from score math.
