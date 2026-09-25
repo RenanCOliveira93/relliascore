@@ -466,6 +466,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_buckets: {
+        Row: {
+          bucket_key: string
+          count: number
+          endpoint: string
+          window_start: string
+        }
+        Insert: {
+          bucket_key: string
+          count?: number
+          endpoint: string
+          window_start: string
+        }
+        Update: {
+          bucket_key?: string
+          count?: number
+          endpoint?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           analyses_limit: number
@@ -640,6 +661,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          p_endpoint: string
+          p_key: string
+          p_max: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       increment_analysis_usage: {
         Args: { p_user_id: string }
         Returns: boolean
@@ -648,6 +678,7 @@ export type Database = {
         Args: { p_error?: string; p_success: boolean; p_webhook_id: string }
         Returns: undefined
       }
+      refund_analysis_usage: { Args: { p_user_id: string }; Returns: undefined }
       validate_api_key: {
         Args: { p_key_hash: string }
         Returns: {
