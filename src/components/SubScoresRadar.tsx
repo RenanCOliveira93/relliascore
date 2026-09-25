@@ -1,10 +1,11 @@
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
-import type { SubScores } from "@/types/analysis";
+import { DIMENSION_LABELS, type ScoreDimensions, type SubScores } from "@/types/analysis";
 
 interface SubScoresRadarProps {
   subScores: SubScores;
+  dimensions?: ScoreDimensions;
 }
 
 const labels: Record<keyof SubScores, string> = {
@@ -15,12 +16,21 @@ const labels: Record<keyof SubScores, string> = {
   clareza_proposta_valor: "Proposta de Valor",
 };
 
-const SubScoresRadar = ({ subScores }: SubScoresRadarProps) => {
-  const data = Object.entries(subScores).map(([key, value]) => ({
-    dimension: labels[key as keyof SubScores],
-    score: value,
-    fullMark: 100,
-  }));
+const SubScoresRadar = ({ subScores, dimensions }: SubScoresRadarProps) => {
+  // Score 2.0: show the five public dimensions; legacy analyses keep their original labels.
+  const data = dimensions
+    ? (Object.keys(DIMENSION_LABELS) as (keyof ScoreDimensions)[]).map((k) => ({
+        dimension: DIMENSION_LABELS[k],
+        score: dimensions[k].available && dimensions[k].score !== null ? Math.round(dimensions[k].score as number) : 0,
+        label: dimensions[k].available && dimensions[k].score !== null ? String(Math.round(dimensions[k].score as number)) : "N/D",
+        fullMark: 100,
+      }))
+    : Object.entries(subScores).map(([key, value]) => ({
+        dimension: labels[key as keyof SubScores],
+        score: value,
+        label: String(value),
+        fullMark: 100,
+      }));
 
   return (
     <Card>
@@ -57,7 +67,7 @@ const SubScoresRadar = ({ subScores }: SubScoresRadarProps) => {
           {data.map((item) => (
             <div key={item.dimension} className="text-center p-2 rounded-lg bg-muted/50">
               <p className="text-xs text-muted-foreground">{item.dimension}</p>
-              <p className="text-lg font-bold text-foreground">{item.score}</p>
+              <p className="text-lg font-bold text-foreground">{item.label}</p>
             </div>
           ))}
         </div>

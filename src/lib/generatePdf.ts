@@ -241,10 +241,12 @@ export function generateAnalysisPdf(
     clareza_proposta_valor: "Proposta de Valor",
   };
 
-  const radarData = Object.entries(result.sub_scores).map(([key, value]) => ({
-    label: subScoreLabels[key] || key,
-    value,
-  }));
+  // Score 2.0 uses the five public dimensions; legacy analyses keep original sub-scores.
+  const dims = result.score_dimensions;
+  const scoreEntries: [string, number][] = dims
+    ? (Object.keys(DIMENSION_LABELS) as DimensionKey[]).map((k) => [DIMENSION_LABELS[k], dims[k].available && dims[k].score !== null ? Math.round(dims[k].score as number) : 0])
+    : Object.entries(result.sub_scores).map(([k, v]) => [subScoreLabels[k] || k, v]);
+  const radarData = scoreEntries.map(([label, value]) => ({ label, value }));
 
   const chartCenterX = pageWidth / 2;
   const chartCenterY = y + 35;
@@ -258,7 +260,7 @@ export function generateAnalysisPdf(
   const boxHeight = 14;
   let bx = margin;
   let by = y;
-  const entries = Object.entries(result.sub_scores);
+  const entries = scoreEntries;
 
   entries.forEach(([key, value], i) => {
     if (i === 3) {
@@ -272,7 +274,7 @@ export function generateAnalysisPdf(
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...COLORS.muted);
-    doc.text(subScoreLabels[key] || key, bx + boxWidth / 2, by + 5, { align: "center" });
+    doc.text(key, bx + boxWidth / 2, by + 5, { align: "center" });
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...COLORS.dark);
