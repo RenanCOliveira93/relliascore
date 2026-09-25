@@ -97,7 +97,7 @@ const Index = () => {
       try {
         if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null }
+          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null, clientRequestId: crypto.randomUUID() }
         });
         if (error) {
           const f = await readFunctionError(error);
@@ -126,7 +126,7 @@ const Index = () => {
       try {
         if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null }
+          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null, clientRequestId: crypto.randomUUID() }
         });
         if (error) {
           const f = await readFunctionError(error);
