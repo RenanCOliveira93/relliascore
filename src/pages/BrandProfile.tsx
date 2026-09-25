@@ -243,11 +243,11 @@ const BrandProfile = () => {
         </div>
       </section>
 
-      <Section title="Visão geral da marca">
+      <Section id="overview" title="Visão geral da marca">
         <div>{SUMMARY_FIELDS.map(summaryRow)}</div>
       </Section>
 
-      <Section title="Posicionamento" aside={addBtn("brand_positioning", "Definir como a marca se define")}>
+      <Section id="positioning" title="Posicionamento" aside={addBtn("brand_positioning", "Definir como a marca se define")}>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Como a marca se define</h3>
@@ -271,7 +271,7 @@ const BrandProfile = () => {
         {derived.pos.message && <p data-testid="positioning-verdict" className={`text-sm ${derived.pos.verdict === "consistent" ? "text-success" : "text-warning"}`}>{derived.pos.message}</p>}
       </Section>
 
-      <Section title="Produtos & Serviços" aside={addBtn("brand_offerings", "Adicionar produto/serviço")}>
+      <Section id="offerings" title="Produtos & Serviços" aside={addBtn("brand_offerings", "Adicionar produto/serviço")}>
         <div className="grid gap-3 md:grid-cols-2">{offeringCards}</div>
         {!offeringCards.length && <EmptyLine>Nenhum produto ou serviço identificado.</EmptyLine>}
       </Section>
