@@ -24,6 +24,7 @@ export type Database = {
           content_score: number | null
           content_score_partial: boolean | null
           created_at: string
+          current_vs_ideal: Json | null
           dados_marca: Json | null
           dim_citation_readiness: number | null
           dim_entity_clarity: number | null
@@ -35,16 +36,21 @@ export type Database = {
           entity_signals: Json | null
           evidence_readiness: Json | null
           id: string
+          improvements: Json | null
           input_type: string | null
           keywords_analysis: Json | null
+          optimized_version: string | null
           origem: string
           page_type: string | null
           page_type_confidence: number | null
           page_type_source: string | null
+          request_id: string | null
+          schema_version: string | null
           score: number | null
           score_dimensions: Json | null
           score_version: string | null
           search_query: string | null
+          strengths: Json | null
           structured_data_recommendations: Json | null
           sub_scores: Json | null
           summary: string | null
@@ -69,6 +75,7 @@ export type Database = {
           content_score?: number | null
           content_score_partial?: boolean | null
           created_at?: string
+          current_vs_ideal?: Json | null
           dados_marca?: Json | null
           dim_citation_readiness?: number | null
           dim_entity_clarity?: number | null
@@ -80,16 +87,21 @@ export type Database = {
           entity_signals?: Json | null
           evidence_readiness?: Json | null
           id?: string
+          improvements?: Json | null
           input_type?: string | null
           keywords_analysis?: Json | null
+          optimized_version?: string | null
           origem?: string
           page_type?: string | null
           page_type_confidence?: number | null
           page_type_source?: string | null
+          request_id?: string | null
+          schema_version?: string | null
           score?: number | null
           score_dimensions?: Json | null
           score_version?: string | null
           search_query?: string | null
+          strengths?: Json | null
           structured_data_recommendations?: Json | null
           sub_scores?: Json | null
           summary?: string | null
@@ -114,6 +126,7 @@ export type Database = {
           content_score?: number | null
           content_score_partial?: boolean | null
           created_at?: string
+          current_vs_ideal?: Json | null
           dados_marca?: Json | null
           dim_citation_readiness?: number | null
           dim_entity_clarity?: number | null
@@ -125,16 +138,21 @@ export type Database = {
           entity_signals?: Json | null
           evidence_readiness?: Json | null
           id?: string
+          improvements?: Json | null
           input_type?: string | null
           keywords_analysis?: Json | null
+          optimized_version?: string | null
           origem?: string
           page_type?: string | null
           page_type_confidence?: number | null
           page_type_source?: string | null
+          request_id?: string | null
+          schema_version?: string | null
           score?: number | null
           score_dimensions?: Json | null
           score_version?: string | null
           search_query?: string | null
+          strengths?: Json | null
           structured_data_recommendations?: Json | null
           sub_scores?: Json | null
           summary?: string | null

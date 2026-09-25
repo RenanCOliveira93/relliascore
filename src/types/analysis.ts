@@ -105,6 +105,8 @@ export interface AnalysisResult extends ContentScoreV2Fields {
   technical_signals?: TechnicalSignals | null;
   llm_assessment?: Record<string, unknown>;
   source_meta?: SourceMeta;
+  /** Set only when reopened from history: parts not present in the stored snapshot. */
+  snapshot_missing?: string[];
 }
 
 // ---------- RELLIA Content Score 2.0 ----------

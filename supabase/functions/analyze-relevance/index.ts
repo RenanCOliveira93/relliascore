@@ -3,7 +3,7 @@ import { dispatchWebhooks } from "../_shared/webhooks.ts";
 import { safeFetch } from "../_shared/url-safety.ts";
 import { extractPage } from "../_shared/extract.ts";
 import { fetchRobots, type RobotsResult } from "../_shared/robots.ts";
-import { buildAnaliseRow } from "../_shared/persist.ts";
+import { buildAnaliseRow, normalizeRequestId } from "../_shared/persist.ts";
 import { computeTechnicalSignals, hasEnoughContent, type TechnicalSignals } from "../_shared/signals.ts";
 import { budgetBlocks, budgetPlainText, metadataSection, type ContentPayload } from "../_shared/content-budget.ts";
 import { extractToolArguments } from "../_shared/model-parse.ts";
@@ -37,6 +37,7 @@ serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return respond(400, { error: "JSON inválido." }); }
   const { websiteUrl, searchQuery, mode = "business", inputType = "webpage", content } = body ?? {};
+  const clientRequestId = normalizeRequestId(body?.clientRequestId);
 
   // Workspace: user calls must own the workspace; internal calls trust public-api's validated key.
   let workspaceId: string | null = null;
@@ -44,6 +45,18 @@ serve(async (req) => {
   if (auth.kind === "user") {
     try { workspaceId = await verifyWorkspace(admin, auth.userId, body?.workspaceId); }
     catch { return respond(403, { error: "Workspace não encontrado ou sem permissão." }); }
+    // No workspace sent (e.g. switcher still loading): fall back to the user's own default workspace
+    // so a completed analysis is never silently left out of the history.
+    if (!workspaceId) {
+      const { data: ws } = await admin.from("workspaces").select("id").eq("user_id", auth.userId).order("created_at", { ascending: true }).limit(1).maybeSingle();
+      workspaceId = ws?.id ?? null;
+      log("workspace_defaulted", { found: !!workspaceId });
+    }
+    // Idempotency: the same execution id never runs (nor consumes quota) twice.
+    if (clientRequestId) {
+      const { data: dup } = await admin.from("analises").select("id").eq("user_id", auth.userId).eq("request_id", clientRequestId).maybeSingle();
+      if (dup) { log("duplicate_request"); return respond(409, { status: "duplicate", error: "Esta análise já foi concluída e está no histórico.", analysis_id: dup.id }); }
+    }
     const allowed = await checkRateLimits(admin, "analyze-relevance", [
       { key: `user:${auth.userId}`, max: 10, windowSeconds: 60 },
       ...(workspaceId ? [{ key: `ws:${workspaceId}`, max: 20, windowSeconds: 60 }] : []),
@@ -244,30 +257,43 @@ Faça a análise completa usando a função fornecida.`;
   };
 
   // Persist successful member-area analyses (public-api persists its own calls). Failures never reach here.
+  // A history failure never discards the user's result, but is always logged (never silent).
+  if (auth.kind === "user" && userId && !workspaceId) log("persist_skipped", { reason: "no_workspace" });
   if (auth.kind === "user" && workspaceId && userId) {
     try {
       let empresaId: string | null = null;
-      const host = (() => { try { return new URL(String(sourceMeta.final_url ?? websiteUrl)).hostname.replace(/^www\./, ""); } catch { return null; } })();
+      const host = inputType !== "webpage" ? null : (() => { try { return new URL(String(sourceMeta.final_url ?? websiteUrl)).hostname.replace(/^www\./, ""); } catch { return null; } })();
       if (host) {
         const { data: emps } = await admin.from("empresas").select("id,url").eq("workspace_id", workspaceId);
         empresaId = (emps ?? []).find((e: any) => { try { return new URL(/^https?:/i.test(e.url) ? e.url : `https://${e.url}`).hostname.replace(/^www\./, "") === host; } catch { return false; } })?.id ?? null;
       }
       const row = buildAnaliseRow(result, {
-        userId, workspaceId, empresaId, origem: "app", inputType, mode, searchQuery,
+        userId, workspaceId, empresaId, origem: "app", inputType, mode, searchQuery, requestId: clientRequestId,
         websiteUrl: inputType === "webpage" ? String(sourceMeta.final_url ?? websiteUrl) : null,
       });
-      const { data: saved, error: saveErr } = row ? await admin.from("analises").insert(row).select("id").single() : { data: null, error: { code: "invalid_row" } };
-      if (saveErr || !saved) log("persist_failed", { code: saveErr?.code });
+      if (!row) log("persist_failed", { reason: "invalid_row" });
       else {
-        result.analysis_id = saved.id;
-        const items = (r.action_plan ?? []).filter((i: any) => i?.action && i?.priority).map((i: any) => ({
-          user_id: userId, workspace_id: workspaceId, empresa_id: empresaId, analise_id: saved.id,
-          priority: i.priority, action: i.action, impact: i.impact ?? null, category: i.category ?? null, affected_dimension: i.affected_dimension ?? null,
-        }));
-        if (items.length) await admin.from("plano_de_acao").insert(items);
-        log("persisted");
+        const { data: saved, error: saveErr } = await admin.from("analises").insert(row).select("id").single();
+        if (saveErr?.code === "23505" && clientRequestId) {
+          const { data: existing } = await admin.from("analises").select("id").eq("user_id", userId).eq("request_id", clientRequestId).maybeSingle();
+          if (existing) result.analysis_id = existing.id;
+          log("persist_duplicate_ignored");
+        } else if (saveErr || !saved) {
+          log("persist_failed", { code: saveErr?.code ?? null, message: saveErr?.message?.slice(0, 200) ?? null });
+        } else {
+          result.analysis_id = saved.id;
+          const items = (r.action_plan ?? []).filter((i: any) => i?.action && i?.priority).map((i: any) => ({
+            user_id: userId, workspace_id: workspaceId, empresa_id: empresaId, analise_id: saved.id,
+            priority: i.priority, action: i.action, impact: i.impact ?? null, category: i.category ?? null, affected_dimension: i.affected_dimension ?? null,
+          }));
+          if (items.length) {
+            const { error: planErr } = await admin.from("plano_de_acao").insert(items);
+            if (planErr) log("persist_plan_failed", { code: planErr.code });
+          }
+          log("persisted", { analysis_id: saved.id, input_type: inputType });
+        }
       }
-    } catch { log("persist_failed"); }
+    } catch (e) { log("persist_failed", { name: (e as Error)?.name, message: String((e as Error)?.message ?? "").slice(0, 200) }); }
   }
 
   if (auth.kind === "user" && workspaceId) {
