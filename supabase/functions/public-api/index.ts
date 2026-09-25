@@ -6,32 +6,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { dispatchWebhooks, sha256Hex } from "../_shared/webhooks.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-api-key",
-};
+import { checkRateLimits, createLogger, publicCors, refundUsage } from "../_shared/http.ts";
+
+// Explicitly public endpoint: authenticated by workspace API key, no cookies.
+const corsHeaders = publicCors();
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-
-// In-memory rate limiter, keyed per API key
-const limiter = new Map<string, { count: number; resetAt: number }>();
-const WINDOW = 60_000;
-const MAX = 20;
-function rateLimited(key: string) {
-  const now = Date.now();
-  const e = limiter.get(key);
-  if (!e || now > e.resetAt) {
-    limiter.set(key, { count: 1, resetAt: now + WINDOW });
-    return false;
-  }
-  e.count++;
-  return e.count > MAX;
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -41,6 +25,9 @@ serve(async (req) => {
   const segments = url.pathname.split("/").filter(Boolean);
   const action = segments[segments.length - 1];
 
+  const requestId = crypto.randomUUID();
+  const log = createLogger("public-api", requestId);
+  log("request_received", { action });
   const apiKey = req.headers.get("x-api-key") ?? req.headers.get("X-API-Key");
   if (!apiKey || !apiKey.startsWith("rl_")) {
     return json(401, { error: "Missing or invalid API key. Use header X-API-Key." });
@@ -63,7 +50,15 @@ serve(async (req) => {
     user_id: string;
   };
 
-  if (rateLimited(apiKey)) return json(429, { error: "Rate limit exceeded" });
+  log("auth_validated");
+  const allowed = await checkRateLimits(admin, "public-api", [
+    { key: `apikey:${keyHash}`, max: 20, windowSeconds: 60 },
+    { key: `ws:${workspace_id}`, max: 40, windowSeconds: 60 },
+  ], log);
+  if (!allowed) return json(429, { error: "Rate limit exceeded" });
+  if (action !== "analyze" && action !== "analyze-brand") {
+    return json(404, { error: "Unknown endpoint. Use /analyze or /analyze-brand", available: ["POST /public-api/analyze", "POST /public-api/analyze-brand"] });
+  }
 
   // Quota: increment user analyses usage
   const { data: ok } = await admin.rpc("increment_analysis_usage", {
@@ -87,6 +82,8 @@ serve(async (req) => {
     "Content-Type": "application/json",
     Authorization: `Bearer ${serviceKey}`,
     apikey: serviceKey,
+    "x-rellia-user-id": user_id,
+    "x-rellia-workspace-id": workspace_id,
   };
 
   // Helper: tenta achar empresa do workspace por URL aproximada
@@ -120,10 +117,15 @@ serve(async (req) => {
     const res = await fetch(`${FUNCTIONS_BASE}/analyze-relevance`, {
       method: "POST",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, workspaceId: workspace_id }),
     });
-    const data = await res.json();
-    if (!res.ok) return json(res.status, data);
+    const data = await res.json().catch(() => ({ status: "analysis_failed", error: "Invalid upstream response" }));
+    if (!res.ok || data?.status !== "success") {
+      await refundUsage(admin, user_id, log);
+      log("analysis_not_completed", { status: data?.status ?? res.status });
+      return json(res.ok ? 502 : res.status, data);
+    }
+    log("persist_started");
 
     const empresa_id = await findEmpresaIdByUrl(body.websiteUrl);
 
@@ -184,10 +186,15 @@ serve(async (req) => {
     const res = await fetch(`${FUNCTIONS_BASE}/analyze-brand`, {
       method: "POST",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, workspaceId: workspace_id }),
     });
-    const data = await res.json();
-    if (!res.ok) return json(res.status, data);
+    const data = await res.json().catch(() => ({ status: "analysis_failed", error: "Invalid upstream response" }));
+    if (!res.ok || data?.status !== "success") {
+      await refundUsage(admin, user_id, log);
+      log("analysis_not_completed", { status: data?.status ?? res.status });
+      return json(res.ok ? 502 : res.status, data);
+    }
+    log("persist_started");
 
     const empresa_id = await findEmpresaIdByUrl(body.website);
 

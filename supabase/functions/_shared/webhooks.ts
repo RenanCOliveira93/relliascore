@@ -1,6 +1,7 @@
 // Shared utility to dispatch outgoing webhooks for a workspace.
 // Uses service role to read webhook configs and record delivery results.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { assertPublicHost, defaultResolver, normalizeUrl } from "./url-safety.ts";
 
 export async function dispatchWebhooks(
   workspaceId: string | null | undefined,
@@ -35,6 +36,11 @@ export async function dispatchWebhooks(
       .filter((w: any) => Array.isArray(w.events) && w.events.includes(event))
       .map(async (w: any) => {
         try {
+          // SSRF guard: webhook targets must be public http(s) hosts.
+          const norm = normalizeUrl(w.url);
+          if (!norm.ok || (await assertPublicHost(norm.url, defaultResolver))) {
+            throw new Error("Webhook URL not allowed (private or invalid host)");
+          }
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
             "User-Agent": "RELLIA-Webhook/1.0",
@@ -51,6 +57,7 @@ export async function dispatchWebhooks(
             method: "POST",
             headers,
             body,
+            redirect: "manual",
             signal: controller.signal,
           });
           clearTimeout(t);
