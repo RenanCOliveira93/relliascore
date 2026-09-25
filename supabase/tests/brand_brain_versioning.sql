@@ -55,14 +55,17 @@ BEGIN
   BEGIN INSERT INTO public.brand_offerings(brand_brain_id, name, type, source_type, confidence, explicit_or_inferred) VALUES (v2,'hack','product','website',0.5,'inferred');
   EXCEPTION WHEN insufficient_privilege THEN ok := true; END;
   IF NOT ok THEN RAISE EXCEPTION 'FAIL B inserted'; END IF;
-  UPDATE public.brand_brains SET company_name = 'hack' WHERE id = v2; -- no privilege → error caught below
-  RAISE EXCEPTION 'FAIL B updated';
-EXCEPTION
-  WHEN insufficient_privilege THEN
-    RESET ROLE;
-    PERFORM set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
-    SET LOCAL ROLE authenticated;
-    SELECT count(*) INTO n FROM public.brand_brains WHERE empresa_id = emp;
-    RESET ROLE;
-    RAISE EXCEPTION 'BRAND_BRAIN_TEST_OK owner_sees=%', n;
+  ok := false;
+  BEGIN UPDATE public.brand_brains SET company_name = 'hack' WHERE id = v2; EXCEPTION WHEN insufficient_privilege THEN ok := true; END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL B updated'; END IF;
+  ok := false;
+  BEGIN DELETE FROM public.brand_brains WHERE id = v2; EXCEPTION WHEN insufficient_privilege THEN ok := true; END;
+  IF NOT ok THEN RAISE EXCEPTION 'FAIL B deleted'; END IF;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  SELECT count(*) INTO n FROM public.brand_brains WHERE empresa_id = emp;
+  IF n <> 2 THEN RAISE EXCEPTION 'FAIL owner sees %', n; END IF;
+  RESET ROLE;
+  RAISE EXCEPTION 'BRAND_BRAIN_TEST_OK owner_sees=% (rolled back)', n;
 END $$;
