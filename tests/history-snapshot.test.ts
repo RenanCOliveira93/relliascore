@@ -33,7 +33,7 @@ const live = (): AnalysisResult & Record<string, any> => ({
   entity_clarity: { brand: { status: "clear", evidence: "ACME", confidence: 0.9 } } as any,
   content_claims: [{ summary: "10 mil clientes", support_status: "supported", support_type: "statistic", confidence: 0.9 }],
   entity_signals: [{ name: "ACME", type: "organization", confidence: 0.9, explicit_or_inferred: "explicit" }],
-  evidence_readiness: { score: 61 } as any, citation_readiness: { score: 70 } as any,
+  evidence_readiness: { score: 61, factors: {} } as any, citation_readiness: { score: 70, factors: { direct_answer: { score: 70 } } } as any,
 });
 
 const ctxUrl: PersistContext = { userId: "user-a", workspaceId: "ws-a", empresaId: null, origem: "app", inputType: "webpage", mode: "business", searchQuery: "melhor crm", websiteUrl: "https://acme.com/", requestId: "9b2f6c1e-1111-4a2b-9c3d-000000000001" };
