@@ -200,6 +200,14 @@ export async function safeFetch(rawUrl: string, opts: SafeFetchOptions = {}): Pr
         },
       });
 
+      // DNS-rebinding mitigation: Deno's fetch cannot pin the validated IP while keeping TLS/SNI,
+      // so we re-resolve after the connection and fail closed if the host now points anywhere private.
+      const recheck = await assertPublicHost(current, resolver);
+      if (recheck) {
+        try { await res.body?.cancel(); } catch { /* ignore */ }
+        return { ok: false, status: "crawl_failed", reason: "O domínio mudou para um endereço não permitido durante o acesso.", requestedUrl };
+      }
+
       if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
         try { await res.body?.cancel(); } catch { /* ignore */ }
         if (++redirects > maxRedirects) return { ok: false, status: "crawl_failed", reason: "A página redirecionou vezes demais.", requestedUrl };
