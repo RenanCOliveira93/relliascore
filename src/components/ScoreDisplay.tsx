@@ -9,12 +9,18 @@ import ActionPlan from "./ActionPlan";
 import KeywordAnalysis from "./KeywordAnalysis";
 import TechnicalGeoAudit from "./TechnicalGeoAudit";
 import type { AnalysisResult } from "@/types/analysis";
+import DiagnosisView, { type DiagnosisContext } from "./diagnosis/DiagnosisView";
 
 interface ScoreDisplayProps {
   result: AnalysisResult;
+  context?: DiagnosisContext;
 }
 
-const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
+const ScoreDisplay = ({ result, context }: ScoreDisplayProps) =>
+  result.score_version === "2.0" ? <DiagnosisView result={result} context={context} /> : <LegacyScoreDisplay result={result} />;
+
+/** Pre-2.0 analyses: original experience, never recalculated or compared with 2.0. */
+const LegacyScoreDisplay = ({ result }: { result: AnalysisResult }) => {
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
@@ -60,7 +66,8 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
       {/* Main Score */}
       <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getScoreGradient(result.score)} border border-border p-8`}>
         <div className="flex flex-col items-center justify-center">
-          <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">{result.score_version === "2.0" ? "RELLIA Content Score" : "LLM Relevance Score"}</p>
+          <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wider">LLM Relevance Score</p>
+          <Badge variant="outline" className="mb-3 text-xs">Metodologia anterior</Badge>
           <div className="relative">
             <span className={`text-8xl font-bold ${getScoreColor(result.score)}`}>{animatedScore}</span>
             <span className={`text-4xl ${getScoreColor(result.score)}`}>%</span>
@@ -86,9 +93,9 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
           <TabsTrigger value="scores" className="text-xs sm:text-sm py-2">Scores</TabsTrigger>
           <TabsTrigger value="diagnostic" className="text-xs sm:text-sm py-2">Diagnóstico</TabsTrigger>
           <TabsTrigger value="action" className="text-xs sm:text-sm py-2">Plano</TabsTrigger>
-          <TabsTrigger value="keywords" className="text-xs sm:text-sm py-2">Keywords</TabsTrigger>
+          <TabsTrigger value="keywords" className="text-xs sm:text-sm py-2">Tópicos & Termos</TabsTrigger>
           {result.ideal_example && (
-            <TabsTrigger value="ideal" className="text-xs sm:text-sm py-2">Ideal</TabsTrigger>
+            <TabsTrigger value="ideal" className="text-xs sm:text-sm py-2">Versão otimizada</TabsTrigger>
           )}
           <TabsTrigger value="details" className="text-xs sm:text-sm py-2">Detalhes</TabsTrigger>
         </TabsList>
@@ -125,7 +132,7 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  Exemplo Ideal
+                  Versão otimizada
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">

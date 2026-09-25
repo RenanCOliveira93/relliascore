@@ -20,6 +20,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VideoBackground from "@/components/VideoBackground";
 import { ArrowLeft, History, FileText, Sparkles, Swords } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ScoreDisplay from "@/components/ScoreDisplay";
+import { rowToResult } from "@/lib/diagnosis";
 
 interface Empresa {
   id: string;
@@ -37,6 +40,8 @@ interface Analise {
   content_score_partial?: boolean | null;
   input_type?: string | null;
   website_url?: string | null;
+  search_query?: string | null;
+  [key: string]: unknown;
 }
 interface AnaliseComp {
   id: string;
@@ -49,6 +54,7 @@ interface AnaliseComp {
 
 const Historico = () => {
   const navigate = useNavigate();
+  const [opened, setOpened] = useState<Analise | null>(null);
   const { activeWorkspace } = useWorkspace();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [analises, setAnalises] = useState<Analise[]>([]);
@@ -170,8 +176,9 @@ const Historico = () => {
                             {new Date(a.created_at).toLocaleString("pt-BR")} · origem: {a.origem}
                             {a.score_version === "2.0" ? " · Score 2.0" : " · legado"}
                             {a.content_score_partial ? " (parcial, texto)" : ""}
-                            {a.website_url ? ` · ${a.website_url}` : ""}
+                            {a.website_url ? ` · ${a.website_url}` : a.input_type === "text" ? " · Texto" : ""}
                           </CardDescription>
+                          {a.search_query && <p className="text-xs text-muted-foreground italic mt-1 line-clamp-1">Intenção: "{a.search_query}"</p>}
                         </div>
                       </div>
                       {a.score !== null && (
@@ -182,6 +189,11 @@ const Historico = () => {
                   {a.summary && (
                     <CardContent>
                       <p className="text-sm text-muted-foreground line-clamp-3">{a.summary}</p>
+                    </CardContent>
+                  )}
+                  {a.tipo === "conteudo" && (
+                    <CardContent className={a.summary ? "pt-0" : ""}>
+                      <Button size="sm" variant="outline" onClick={() => setOpened(a)}>Abrir diagnóstico</Button>
                     </CardContent>
                   )}
                 </Card>
@@ -215,6 +227,17 @@ const Historico = () => {
           )}
         </main>
       </div>
+      <Dialog open={!!opened} onOpenChange={(o) => !o && setOpened(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader><DialogTitle>Diagnóstico salvo</DialogTitle></DialogHeader>
+          {opened && (
+            <ScoreDisplay
+              result={rowToResult(opened)}
+              context={{ source: opened.website_url ?? undefined, query: opened.search_query ?? undefined, inputType: opened.input_type === "text" ? "text" : "webpage" }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
