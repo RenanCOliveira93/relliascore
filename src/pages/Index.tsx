@@ -205,7 +205,7 @@ const Index = () => {
         setBrandHistoryKey((k) => k + 1);
       }
 
-      toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo da sua marca." });
+      toast({ title: "Análise concluída!", description: result?.brand_brain?.persisted ? `Brand Profile atualizado (Brand Brain v${result.brand_brain.version}).` : "Veja o diagnóstico completo da sua marca." });
     } catch (error) {
       console.error("Brand analysis error:", error);
       toast({ title: "Erro na análise", description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar a marca.", variant: "destructive" });
