@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,8 @@ import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
 import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
-import BrandAnalysisForm from "@/components/BrandAnalysisForm";
+import BrandAnalysisForm, { type BrandFormEmpresa } from "@/components/BrandAnalysisForm";
+import { useSearchParams } from "react-router-dom";
 import BrandAnalysisResults from "@/components/BrandAnalysisResults";
 import BrandAnalysisHistory from "@/components/BrandAnalysisHistory";
 import { generateAnalysisPdf } from "@/lib/generatePdf";
@@ -61,11 +62,18 @@ const Index = () => {
   const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
   const [brandMode, setBrandMode] = useState<AnalysisMode>("business");
   const [brandHistoryKey, setBrandHistoryKey] = useState(0);
+  const [searchParams] = useSearchParams();
+  const [brandEmpresas, setBrandEmpresas] = useState<BrandFormEmpresa[]>([]);
   const [brandSources, setBrandSources] = useState<{ website?: string; linkedin?: string; instagram?: string; description?: string }>({});
 
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { activeWorkspace } = useWorkspace();
+  useEffect(() => {
+    if (!activeWorkspace) { setBrandEmpresas([]); return; }
+    supabase.from("empresas").select("id,nome,url,linkedin_url,instagram_url,descricao").eq("workspace_id", activeWorkspace.id).order("nome")
+      .then(({ data }) => setBrandEmpresas((data ?? []) as BrandFormEmpresa[]));
+  }, [activeWorkspace]);
   const { planConfig, canAnalyze, remainingAnalyses, subscription, refreshSubscription } = useSubscription();
 
   const handleAnalyze = async () => {
@@ -153,6 +161,7 @@ const Index = () => {
     instagram: string;
     description: string;
     mode: AnalysisMode;
+    empresaId: string | null;
   }) => {
     if (!canAnalyze) {
       toast({ title: "Limite atingido", description: "Você atingiu o limite de análises do seu plano.", variant: "destructive" });
@@ -174,7 +183,7 @@ const Index = () => {
     try {
       if (!canAnalyze) throw new Error("Limite de análises atingido.");
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
-        body: { ...data, workspaceId: activeWorkspace?.id ?? null }
+        body: { ...data, workspaceId: activeWorkspace?.id ?? null, empresaId: data.empresaId }
       });
       if (error) { const f = await readFunctionError(error); refreshSubscription(); throw new Error(f.error); }
       if (result.error) throw new Error(result.error);
@@ -196,7 +205,7 @@ const Index = () => {
         setBrandHistoryKey((k) => k + 1);
       }
 
-      toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo da sua marca." });
+      toast({ title: "Análise concluída!", description: result?.brand_brain?.persisted ? `Brand Profile atualizado (Brand Brain v${result.brand_brain.version}).` : "Veja o diagnóstico completo da sua marca." });
     } catch (error) {
       console.error("Brand analysis error:", error);
       toast({ title: "Erro na análise", description: error instanceof Error ? error.message : "Ocorreu um erro ao analisar a marca.", variant: "destructive" });
@@ -256,7 +265,7 @@ const Index = () => {
         </header>
 
         <main className="container mx-auto px-4 py-8 max-w-4xl">
-          <Tabs defaultValue="relevance" className="w-full">
+          <Tabs defaultValue={searchParams.get("tab") === "brand" ? "brand" : "relevance"} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
               <TabsTrigger value="relevance" className="text-sm gap-2 h-10">
                 <Search className="h-4 w-4" />
@@ -478,7 +487,7 @@ const Index = () => {
                     }}
                   />
 
-                  <BrandAnalysisForm onAnalyze={handleBrandAnalyze} isAnalyzing={isBrandAnalyzing} />
+                  <BrandAnalysisForm onAnalyze={handleBrandAnalyze} isAnalyzing={isBrandAnalyzing} empresas={brandEmpresas} initialEmpresaId={searchParams.get("empresa")} />
                 </div>
               )}
 

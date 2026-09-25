@@ -43,6 +43,7 @@ import {
   Globe,
   Linkedin,
   Instagram,
+  Brain,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -222,6 +223,9 @@ const Empresas = () => {
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/empresas/${e.id}/brand`)}>
+                        <Brain className="h-4 w-4 mr-1" />Abrir Brand Profile
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(e)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
