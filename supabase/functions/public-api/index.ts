@@ -6,6 +6,7 @@ import { buildAnaliseRow } from "../_shared/persist.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { dispatchWebhooks, sha256Hex } from "../_shared/webhooks.ts";
+import { brandWebhookFields } from "../_shared/brand-alignment.ts";
 
 import { checkRateLimits, createLogger, publicCors, refundUsage } from "../_shared/http.ts";
 
@@ -118,7 +119,8 @@ serve(async (req) => {
     const res = await fetch(`${FUNCTIONS_BASE}/analyze-relevance`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ ...body, workspaceId: workspace_id }),
+      // Optional brand-aware mode: empresa_id is re-verified by analyze-relevance against this key's workspace/user (403 cross-tenant).
+      body: JSON.stringify({ ...body, empresaId: body.empresa_id ?? body.empresaId ?? null, workspaceId: workspace_id }),
     });
     const data = await res.json().catch(() => ({ status: "analysis_failed", error: "Invalid upstream response" }));
     if (!res.ok || data?.status !== "success") {
@@ -128,7 +130,7 @@ serve(async (req) => {
     }
     log("persist_started");
 
-    const empresa_id = await findEmpresaIdByUrl(body.websiteUrl);
+    const empresa_id = data.empresa_id ?? await findEmpresaIdByUrl(body.websiteUrl);
 
     // Persist analise (conteudo)
     const { data: analiseRow } = await admin
@@ -178,6 +180,7 @@ serve(async (req) => {
       score_dimensions: data.score_dimensions
         ? Object.fromEntries(Object.entries(data.score_dimensions as Record<string, any>).map(([k, d]) => [k, { score: d?.score ?? null, source: d?.source, available: d?.available }]))
         : null,
+      ...brandWebhookFields(data, empresa_id),
     });
 
     return json(200, data);
