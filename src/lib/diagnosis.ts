@@ -164,8 +164,8 @@ export function strengthsOf(r: AnalysisResult): string[] {
   if (supported > 0) out.push(`${supported} afirmação(ões) com suporte identificado na página`);
   const rules = r.technical_geo?.rules ?? [];
   const passed = (id: RegExp) => rules.some((x) => id.test(x.id) && x.status === "pass");
-  if (passed(/noindex|indexable/i)) out.push("Página indexável (sem bloqueio noindex)");
-  if (passed(/json_ld_valid|structured_data_present|schema_page/i)) out.push("Dados estruturados presentes e válidos");
+  if (passed(/^indexable$/)) out.push("Página indexável (sem bloqueio noindex)");
+  if (passed(/^json_ld_present$/) && passed(/^json_ld_valid$/)) out.push("Dados estruturados presentes e válidos");
   for (const s of r.strengths ?? []) if (s && !out.includes(s)) out.push(s);
   return out.slice(0, 8);
 }
