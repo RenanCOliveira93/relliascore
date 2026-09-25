@@ -1,5 +1,5 @@
 // Deterministic technical signals. These are FACTS computed from the page — never produced by the LLM.
-import type { PageExtraction } from "./extract.ts";
+import type { PageExtraction, SchemaEntity } from "./extract.ts";
 
 export interface TechnicalIssue { id: string; severity: "alta" | "media" | "baixa"; message: string }
 
@@ -32,20 +32,36 @@ export interface TechnicalSignals {
   has_published_date: boolean;
   has_modified_date: boolean;
   issues: TechnicalIssue[];
+  // ---- Technical GEO 2.0 extras (optional: older fixtures/rows may not carry them → rules become "unavailable") ----
+  final_url?: string;
+  is_https?: boolean;
+  content_type?: string | null;
+  canonical_other_host?: boolean;
+  heading_levels?: number[];
+  empty_headings_count?: number;
+  list_count?: number;
+  has_contact_links?: boolean;
+  generic_anchor_count?: number;
+  og_type?: string | null;
+  schema_entity?: SchemaEntity | null;
 }
 
 export const MIN_WORDS_FOR_ANALYSIS = 30;
 
-export function computeTechnicalSignals(p: PageExtraction): TechnicalSignals {
+export function computeTechnicalSignals(p: PageExtraction, extra: { contentType?: string | null } = {}): TechnicalSignals {
   const imagesMissingAlt = p.images.filter((i) => !i.alt).length;
   let canonicalMatches: boolean | null = null;
+  let canonicalOtherHost = false;
   if (p.canonical) {
     try {
       const c = new URL(p.canonical, p.final_url);
       const f = new URL(p.final_url);
       canonicalMatches = c.hostname === f.hostname && c.pathname.replace(/\/$/, "") === f.pathname.replace(/\/$/, "");
+      canonicalOtherHost = c.hostname.replace(/^www\./, "") !== f.hostname.replace(/^www\./, "");
     } catch { canonicalMatches = false; }
   }
+  let isHttps = false;
+  try { isHttps = new URL(p.final_url).protocol === "https:"; } catch { /* keep false */ }
   const robotsNoindex = /noindex/i.test(p.robots_meta ?? "");
   const s: TechnicalSignals = {
     http_status: p.http_status,
@@ -76,6 +92,17 @@ export function computeTechnicalSignals(p: PageExtraction): TechnicalSignals {
     has_published_date: !!p.published_date,
     has_modified_date: !!p.modified_date,
     issues: [],
+    final_url: p.final_url,
+    is_https: isHttps,
+    content_type: extra.contentType ?? null,
+    canonical_other_host: canonicalOtherHost,
+    heading_levels: p.heading_levels,
+    empty_headings_count: p.empty_headings_count,
+    list_count: p.list_count,
+    has_contact_links: p.has_contact_links,
+    generic_anchor_count: p.generic_anchor_count,
+    og_type: p.og_type,
+    schema_entity: p.schema_entity,
   };
 
   const add = (id: string, severity: TechnicalIssue["severity"], message: string) => s.issues.push({ id, severity, message });
@@ -93,8 +120,10 @@ export function computeTechnicalSignals(p: PageExtraction): TechnicalSignals {
   if (s.thin_content) add("thin_content", "media", `Conteúdo curto (${s.word_count} palavras).`);
   if (s.images_missing_alt > 0) add("images_missing_alt", "baixa", `${s.images_missing_alt} imagem(ns) sem texto alternativo.`);
   if (!s.has_open_graph) add("missing_open_graph", "baixa", "Tags OpenGraph ausentes.");
-  if (!s.has_author) add("missing_author", "baixa", "Autor não identificado.");
-  if (!s.has_published_date && !s.has_modified_date) add("missing_dates", "baixa", "Datas de publicação/atualização ausentes.");
+  // Author/date only matter for editorial content (no universal penalty).
+  const editorial = /article/i.test(s.og_type ?? "") || s.schema_types.some((t) => /Article|BlogPosting/.test(t));
+  if (editorial && !s.has_author) add("missing_author", "baixa", "Autor não identificado.");
+  if (editorial && !s.has_published_date && !s.has_modified_date) add("missing_dates", "baixa", "Datas de publicação/atualização ausentes.");
   return s;
 }
 
