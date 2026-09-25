@@ -179,7 +179,7 @@ export function executiveSummary(r: AnalysisResult, priorities: DisplayAction[])
   const score = r.content_score !== undefined ? Math.round(r.content_score) : r.score;
   const overall = score >= 75 ? "boa preparação" : score >= 50 ? "preparação moderada" : "preparação limitada";
   const strong = dims.filter((x) => x.d.score >= 75).sort((a, b) => b.d.score - a.d.score).slice(0, 2);
-  const weak = dims.filter((x) => x.d.score < 60).sort((a, b) => a.d.score - b.d.score).slice(0, 2);
+  const weak = dims.filter((x) => x.d.score < 70).sort((a, b) => a.d.score - b.d.score).slice(0, 2);
   const list = (xs: { k: DimensionKey }[]) => xs.map((x) => DIMENSION_LABELS[x.k]).join(" e ");
   const parts = [`Seu conteúdo apresenta ${overall} para sistemas de busca e IA na intenção analisada.`];
   if (strong.length) parts.push(`Os pontos mais fortes estão em ${list(strong)}.`);

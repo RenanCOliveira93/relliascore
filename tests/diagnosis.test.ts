@@ -60,7 +60,7 @@ describe("weights_applied / score breakdown", () => {
   test("uses persisted weights and matches the example math", () => {
     const b = weightedBreakdown(urlResult());
     expect(b.usesPersistedWeights).toBe(true);
-    expect(b.weighted).toBe(75.45);
+    expect(b.weighted).toBe(75.1); // 82×.3+76×.2+61×.2+70×.15+84×.15
     expect(b.rounded).toBe(75);
   });
   test("partial text: Technical GEO is N/D, not zero, and uses redistributed weights", () => {
