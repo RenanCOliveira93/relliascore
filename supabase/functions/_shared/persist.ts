@@ -2,6 +2,7 @@
 // The row is the historical SNAPSHOT: reopening never re-calls the LLM, re-crawls or re-scores.
 // Raw pasted text is never stored (inputType "text" keeps website_url null and has no content column).
 import { v2AnaliseColumns } from "./score-v2.ts";
+import { brandAnaliseColumns } from "./brand-alignment.ts";
 
 export interface PersistContext {
   userId: string;
@@ -45,5 +46,6 @@ export function buildAnaliseRow(data: Record<string, any>, ctx: PersistContext):
     optimized_version: typeof data.ideal_example === "string" && data.ideal_example.trim() ? data.ideal_example : null,
     current_vs_ideal: data.compatibility_diagnostic && typeof data.compatibility_diagnostic === "object" ? data.compatibility_diagnostic : null,
     ...v2AnaliseColumns(data),
+    ...brandAnaliseColumns(data),
   };
 }
