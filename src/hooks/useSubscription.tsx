@@ -108,13 +108,8 @@ export const SubscriptionProvider = ({ children }: { children: React.ReactNode }
         ? Math.max(0, subscription.analyses_limit - subscription.analyses_used)
         : 0;
 
+  // Quota is consumed server-side by the analysis functions; kept for API compatibility.
   const incrementUsage = async (): Promise<boolean> => {
-    if (!user) return false;
-    const { data, error } = await supabase.rpc("increment_analysis_usage", {
-      p_user_id: user.id,
-    });
-    if (error || data === false) return false;
-    // Refresh local state
     await fetchSubscription();
     return true;
   };

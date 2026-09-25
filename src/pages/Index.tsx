@@ -66,7 +66,7 @@ const Index = () => {
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { activeWorkspace } = useWorkspace();
-  const { planConfig, canAnalyze, remainingAnalyses, incrementUsage, subscription, refreshSubscription } = useSubscription();
+  const { planConfig, canAnalyze, remainingAnalyses, subscription, refreshSubscription } = useSubscription();
 
   const handleAnalyze = async () => {
     if (!canAnalyze) {
@@ -95,8 +95,7 @@ const Index = () => {
       setResult(null);
       setFailure(null);
       try {
-        const allowed = await incrementUsage();
-        if (!allowed) throw new Error("Limite de análises atingido.");
+        if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null }
         });
@@ -108,6 +107,7 @@ const Index = () => {
         }
         if (data?.status && data.status !== "success") { setFailure(data); refreshSubscription(); return; }
         setResult(data);
+        refreshSubscription();
         toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu site." });
       } catch (error) {
         console.error("Analysis error:", error);
@@ -124,8 +124,7 @@ const Index = () => {
       setResult(null);
       setFailure(null);
       try {
-        const allowed = await incrementUsage();
-        if (!allowed) throw new Error("Limite de análises atingido.");
+        if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null }
         });
@@ -137,6 +136,7 @@ const Index = () => {
         }
         if (data?.status && data.status !== "success") { setFailure(data); refreshSubscription(); return; }
         setResult(data);
+        refreshSubscription();
         toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu texto." });
       } catch (error) {
         console.error("Analysis error:", error);
@@ -172,14 +172,14 @@ const Index = () => {
       description: data.description,
     });
     try {
-      const allowed = await incrementUsage();
-      if (!allowed) throw new Error("Limite de análises atingido.");
+      if (!canAnalyze) throw new Error("Limite de análises atingido.");
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
         body: { ...data, workspaceId: activeWorkspace?.id ?? null }
       });
       if (error) { const f = await readFunctionError(error); refreshSubscription(); throw new Error(f.error); }
       if (result.error) throw new Error(result.error);
       setBrandResult(result);
+      refreshSubscription();
 
       if (user) {
         await supabase.from("brand_analyses").insert({
