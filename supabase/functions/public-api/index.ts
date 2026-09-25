@@ -1,5 +1,4 @@
 import { buildAnaliseRow } from "../_shared/persist.ts";
-import { v2AnaliseColumns } from "../_shared/score-v2.ts";
 // Public REST API authenticated via workspace API keys (header: X-API-Key).
 // Endpoints:
 //   POST /public-api/analyze         → relevance analysis

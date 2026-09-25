@@ -93,7 +93,11 @@ Deno.test("v2: overall score is computed by the backend; LLM-provided score is i
 Deno.test("v2: technical GEO is deterministic from signals", () => {
   assertEquals(computeTechnicalGeo(signals()).score, 100);
   const bad = computeTechnicalGeo(signals({ has_title: false, has_meta_description: false, h1_count: 0, robots_noindex: true }));
-  assertEquals(bad.score, 100 - 15 - 10 - 10 - 10);
+  // Ruleset v1: score = earned / applicable points (not_applicable/unavailable excluded) — same input, same output.
+  const again = computeTechnicalGeo(signals({ has_title: false, has_meta_description: false, h1_count: 0, robots_noindex: true }));
+  assert(bad.score < 75);
+  assertEquals(bad.score, again.score);
+  assertEquals(bad.result.critical_issues.map((c) => c.rule_id), ["indexable"]);
 });
 Deno.test("v2: conflict LLM vs technical signal → signal wins", () => {
   const raw = llm();
