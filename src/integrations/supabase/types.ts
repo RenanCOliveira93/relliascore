@@ -17,45 +17,90 @@ export type Database = {
       analises: {
         Row: {
           action_plan: Json | null
+          citation_readiness: Json | null
+          content_claims: Json | null
+          content_score: number | null
+          content_score_partial: boolean | null
           created_at: string
           dados_marca: Json | null
+          dim_citation_readiness: number | null
+          dim_entity_clarity: number | null
+          dim_evidence_authority: number | null
+          dim_semantic_relevance: number | null
+          dim_technical_geo: number | null
           empresa_id: string | null
+          entity_clarity: Json | null
+          entity_signals: Json | null
+          evidence_readiness: Json | null
           id: string
           keywords_analysis: Json | null
           origem: string
           score: number | null
+          score_dimensions: Json | null
+          score_version: string | null
           sub_scores: Json | null
           summary: string | null
+          technical_signals: Json | null
           tipo: string
           user_id: string
           workspace_id: string
         }
         Insert: {
           action_plan?: Json | null
+          citation_readiness?: Json | null
+          content_claims?: Json | null
+          content_score?: number | null
+          content_score_partial?: boolean | null
           created_at?: string
           dados_marca?: Json | null
+          dim_citation_readiness?: number | null
+          dim_entity_clarity?: number | null
+          dim_evidence_authority?: number | null
+          dim_semantic_relevance?: number | null
+          dim_technical_geo?: number | null
           empresa_id?: string | null
+          entity_clarity?: Json | null
+          entity_signals?: Json | null
+          evidence_readiness?: Json | null
           id?: string
           keywords_analysis?: Json | null
           origem?: string
           score?: number | null
+          score_dimensions?: Json | null
+          score_version?: string | null
           sub_scores?: Json | null
           summary?: string | null
+          technical_signals?: Json | null
           tipo: string
           user_id: string
           workspace_id: string
         }
         Update: {
           action_plan?: Json | null
+          citation_readiness?: Json | null
+          content_claims?: Json | null
+          content_score?: number | null
+          content_score_partial?: boolean | null
           created_at?: string
           dados_marca?: Json | null
+          dim_citation_readiness?: number | null
+          dim_entity_clarity?: number | null
+          dim_evidence_authority?: number | null
+          dim_semantic_relevance?: number | null
+          dim_technical_geo?: number | null
           empresa_id?: string | null
+          entity_clarity?: Json | null
+          entity_signals?: Json | null
+          evidence_readiness?: Json | null
           id?: string
           keywords_analysis?: Json | null
           origem?: string
           score?: number | null
+          score_dimensions?: Json | null
+          score_version?: string | null
           sub_scores?: Json | null
           summary?: string | null
+          technical_signals?: Json | null
           tipo?: string
           user_id?: string
           workspace_id?: string
@@ -381,6 +426,7 @@ export type Database = {
       plano_de_acao: {
         Row: {
           action: string
+          affected_dimension: string | null
           analise_id: string | null
           category: string | null
           concluida: boolean
@@ -394,6 +440,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          affected_dimension?: string | null
           analise_id?: string | null
           category?: string | null
           concluida?: boolean
@@ -407,6 +454,7 @@ export type Database = {
         }
         Update: {
           action?: string
+          affected_dimension?: string | null
           analise_id?: string | null
           category?: string | null
           concluida?: boolean

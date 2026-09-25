@@ -27,6 +27,7 @@ export interface ActionPlanItem {
   confidence?: number;
   basis?: "signal" | "content" | "inference";
   signal_ref?: string;
+  affected_dimension?: DimensionKey;
 }
 
 export type AnalysisStatus = "success" | "crawl_failed" | "invalid_url" | "timeout" | "unsupported_content" | "analysis_failed";
@@ -87,7 +88,7 @@ export interface KeywordsAnalysis {
   suggested: string[];
 }
 
-export interface AnalysisResult {
+export interface AnalysisResult extends ContentScoreV2Fields {
   score: number;
   summary: string;
   strengths: string[];
@@ -105,3 +106,75 @@ export interface AnalysisResult {
   llm_assessment?: Record<string, unknown>;
   source_meta?: SourceMeta;
 }
+
+// ---------- RELLIA Content Score 2.0 ----------
+/** Absent score_version on stored/returned analyses means "legacy" (never recalculated, not comparable with 2.0). */
+export type ScoreVersion = "2.0" | "legacy";
+export type DimensionKey = "semantic_relevance" | "entity_clarity" | "evidence_authority" | "citation_readiness" | "technical_geo";
+export type DimensionSource = "deterministic" | "llm" | "hybrid";
+
+export interface ScoreDimension {
+  available: boolean;
+  score: number | null;
+  weight: number;
+  source: DimensionSource;
+  reason: string;
+  evidence: string[];
+  confidence: number;
+}
+export type ScoreDimensions = Record<DimensionKey, ScoreDimension>;
+
+export const DIMENSION_LABELS: Record<DimensionKey, string> = {
+  semantic_relevance: "Relevância Semântica",
+  entity_clarity: "Clareza & Entidade",
+  evidence_authority: "Evidência & Autoridade",
+  citation_readiness: "Prontidão para Citação",
+  technical_geo: "Technical GEO",
+};
+
+export type EntityType = "organization" | "person" | "product" | "service" | "technology" | "location" | "market" | "concept" | "other";
+export interface EntitySignal { name: string; type: EntityType; evidence?: string; confidence: number; explicit_or_inferred: "explicit" | "inferred" }
+
+export interface ContentClaim {
+  summary: string;
+  evidence?: string;
+  support_status: "supported" | "partially_supported" | "unsupported" | "unknown";
+  support_type: "statistic" | "reference" | "case" | "testimonial" | "certification" | "study" | "author" | "none" | "other";
+  confidence: number;
+}
+
+export interface EvidenceItem { present: boolean; evidence?: string; confidence: number; source: DimensionSource }
+export type EvidenceKey = "statistics" | "external_references" | "cases" | "customers" | "certifications" | "studies" | "author" | "published_date" | "modified_date";
+export interface EvidenceReadiness {
+  items: Record<EvidenceKey, EvidenceItem>;
+  factual_claims: number;
+  supported_claims: number;
+  unsupported_claims: number;
+  score: number;
+  conflicts: string[];
+}
+
+export type CitationKey = "self_contained_facts" | "clear_definitions" | "direct_answers" | "contextualized_numbers" | "descriptive_headings" | "claim_evidence_connection" | "extractable_passages";
+export interface CitationFactor { score: number; evidence?: string; confidence: number; source: DimensionSource }
+export interface CitationReadiness { factors: Record<CitationKey, CitationFactor>; score: number }
+
+export type ClarityStatus = "clear" | "partial" | "absent";
+export interface ClarityItem { status: ClarityStatus; value?: string; evidence?: string; confidence: number }
+export type EntityClarityKey = "primary_entity" | "entity_name_clear" | "category_clear" | "offering_clear" | "audience_clear" | "problem_clear" | "value_proposition_clear" | "differentiators_clear";
+export type EntityClarity = Record<EntityClarityKey, ClarityItem>;
+
+export interface ContentScoreV2Fields {
+  score_version?: "2.0";
+  content_score?: number;
+  content_score_partial?: boolean;
+  weights_applied?: Partial<Record<DimensionKey, number>>;
+  score_dimensions?: ScoreDimensions;
+  entity_clarity?: EntityClarity;
+  evidence_readiness?: EvidenceReadiness;
+  citation_readiness?: CitationReadiness;
+  entity_signals?: EntitySignal[];
+  content_claims?: ContentClaim[];
+}
+
+export const scoreVersionOf = (r: { score_version?: string | null } | null | undefined): ScoreVersion =>
+  r?.score_version === "2.0" ? "2.0" : "legacy";

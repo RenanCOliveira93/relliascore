@@ -1,0 +1,2 @@
+- Content Score 2.0 is computed only in `supabase/functions/_shared/score-v2.ts` (weighted formula, deterministic Technical GEO); the LLM never supplies the overall score — keeps scoring auditable and non-fabricated.
+- Analyses without `score_version` are legacy and are never recalculated or compared numerically with 2.0 — preserves history integrity.

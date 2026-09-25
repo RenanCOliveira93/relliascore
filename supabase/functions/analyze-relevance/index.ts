@@ -4,7 +4,8 @@ import { safeFetch } from "../_shared/url-safety.ts";
 import { extractPage } from "../_shared/extract.ts";
 import { computeTechnicalSignals, hasEnoughContent, type TechnicalSignals } from "../_shared/signals.ts";
 import { budgetBlocks, budgetPlainText, metadataSection, type ContentPayload } from "../_shared/content-budget.ts";
-import { extractToolArguments, validateRelevanceResult } from "../_shared/model-parse.ts";
+import { extractToolArguments } from "../_shared/model-parse.ts";
+import { buildV2Scores, buildV2ToolSchema, validateV2Assessment } from "../_shared/score-v2.ts";
 import {
   adminClient, authenticate, checkRateLimits, clientIp, createLogger, jsonResponse, privateCors, refundUsage, verifyWorkspace,
 } from "../_shared/http.ts";
@@ -116,7 +117,7 @@ serve(async (req) => {
   const signalIds = technicalSignals?.issues.map((i) => i.id) ?? [];
   const modeContext = mode === "influencer"
     ? `O contexto é de um INFLUENCER / MARCA PESSOAL. Foque em: autoridade pessoal, presença digital, tom de voz autêntico, engajamento percebido, conexão com a audiência, storytelling, prova social e posicionamento como referência no nicho.`
-    : `O contexto é de uma EMPRESA / EMPREENDIMENTO. Foque em: SEO técnico, autoridade de domínio, proposta de valor clara, conversão, competitividade no mercado, credibilidade institucional e otimização para buscas comerciais.`;
+    : `O contexto é de uma EMPRESA / EMPREENDIMENTO. Foque em: SEO técnico, evidências de credibilidade presentes no conteúdo, proposta de valor clara, conversão, competitividade no mercado, credibilidade institucional e otimização para buscas comerciais.`;
   const textContext = inputType === "text"
     ? `IMPORTANTE: Este texto ainda NÃO foi publicado. Analise como se fosse ser postado. Forneça um exemplo completo de texto ideal (score próximo a 100%) mantendo a essência do original.`
     : `Forneça um exemplo de conteúdo ideal (score próximo a 100%) que a página deveria ter para ser perfeitamente relevante para a pesquisa.`;
@@ -129,6 +130,12 @@ Regras de evidência:
 - Os SINAIS TÉCNICOS fornecidos são FATOS medidos automaticamente. Não os contradiga e não invente sinais técnicos que não estejam listados.
 - Em cada item do plano de ação, informe "basis": "signal" quando baseado em um sinal técnico (e preencha "signal_ref" com o id exato do problema), "content" quando baseado em trecho concreto do conteúdo (cite o trecho em "evidence"), ou "inference" quando for julgamento seu.
 - Nunca invente evidências. "confidence" vai de 0 a 1.
+- Você NÃO calcula score geral nem nota técnica: o backend calcula o RELLIA Content Score a partir das suas avaliações e dos fatos técnicos. Não estime probabilidade de recomendação nem ranking em ChatGPT, Gemini, Claude ou Perplexity.
+- Evidência & Autoridade mede apenas evidências PRESENTES no conteúdo (dados, referências, cases, autoria, datas). Não infira autoridade externa, Domain Authority ou popularidade.
+- entity_clarity: "clear" só com trecho literal em "evidence"; se ausente, use "absent". Não invente entidade.
+- content_claims: liste afirmações relevantes e se o próprio material as sustenta (sem checagem externa).
+- Em cada ação do plano, informe "affected_dimension" (semantic_relevance, entity_clarity, evidence_authority, citation_readiness ou technical_geo). Não invente números de impacto.
+- "reason" deve ser uma justificativa curta para o usuário, nunca raciocínio interno.
 ${payload.content_truncated ? "- O conteúdo foi resumido por seleção de blocos; não conclua que algo está ausente só porque não aparece no trecho enviado, a menos que os sinais técnicos confirmem." : ""}`;
 
   const userPrompt = `Tipo de Entrada: ${inputType === "text" ? "Texto pré-publicação" : "Webpage publicada"}
@@ -174,24 +181,49 @@ Faça a análise completa usando a função fornecida.`;
   log("model_call_completed");
 
   const args = extractToolArguments(aiResponse);
-  const validated = args.ok ? validateRelevanceResult(args.value, signalIds) : args;
+  const validated = args.ok ? validateV2Assessment(args.value, signalIds) : args;
   if (!validated.ok) {
     log("parse_failed", { reason: validated.reason });
     return fail("analysis_failed", "Não foi possível interpretar a resposta da IA. Tente novamente.");
   }
+  if (validated.value.ignored_fields.length) log("llm_forbidden_fields_ignored", { fields: validated.value.ignored_fields });
+  const scored = buildV2Scores(validated.value, technicalSignals);
+  if (!scored.ok) {
+    log("score_failed", { reason: scored.reason });
+    return fail("analysis_failed", "Não foi possível calcular o score com segurança. Tente novamente.");
+  }
   log("parse_completed");
-  const r = validated.value as any;
+  const a = validated.value;
+  const v2 = scored.value;
+  const r = {
+    score: v2.score, sub_scores: v2.sub_scores, summary: a.summary, strengths: a.strengths, improvements: a.improvements,
+    compatibility_diagnostic: a.compatibility_diagnostic, action_plan: a.action_plan, keywords_analysis: a.keywords_analysis,
+    ideal_example: a.ideal_example,
+  };
 
   const result = {
     // Legacy flat format (kept for UI/PDF/API compatibility)
     ...r,
     status: "success",
-    schema_version: "p0.1",
+    schema_version: "p0.2",
+    score_version: v2.score_version,
+    content_score: v2.content_score,
+    content_score_partial: v2.content_score_partial,
+    weights_applied: v2.weights_applied,
+    score_dimensions: v2.score_dimensions,
+    entity_clarity: v2.entity_clarity,
+    evidence_readiness: v2.evidence_readiness,
+    citation_readiness: v2.citation_readiness,
+    entity_signals: v2.entity_signals,
+    content_claims: v2.content_claims,
+    technical_geo_checks: v2.technical_geo_checks,
     analysis_id: requestId,
     technical_signals: technicalSignals,
+    // Only what the model produced (no overall score — that is computed by the backend).
     llm_assessment: {
-      score: r.score, sub_scores: r.sub_scores, summary: r.summary, strengths: r.strengths, improvements: r.improvements,
-      compatibility_diagnostic: r.compatibility_diagnostic, action_plan: r.action_plan,
+      semantic_relevance: a.semantic_relevance, entity_clarity: a.entity_clarity, evidence_readiness: a.evidence_raw,
+      citation_readiness: a.citation_raw, summary: a.summary, strengths: a.strengths, improvements: a.improvements,
+      compatibility_diagnostic: a.compatibility_diagnostic, action_plan: a.action_plan,
     },
     source_meta: {
       ...sourceMeta,
@@ -207,61 +239,30 @@ Faça a análise completa usando a função fornecida.`;
       analysis_id: requestId, mode, input_type: inputType, website_url: websiteUrl ?? null, search_query: searchQuery,
       score: r.score, sub_scores: r.sub_scores, action_plan: r.action_plan, keywords_analysis: r.keywords_analysis,
       summary: r.summary, technical_signals: technicalSignals, source: "app",
+      score_version: v2.score_version, content_score: v2.content_score, content_score_partial: v2.content_score_partial,
+      score_dimensions: Object.fromEntries(Object.entries(v2.score_dimensions).map(([k, d]) => [k, { score: d.score, source: d.source, available: d.available }])),
     }).then(() => log("webhook_dispatched")).catch(() => log("webhook_error"));
   }
 
-  log("completed", { score: r.score });
+  log("completed", { score_version: v2.score_version, content_score: v2.content_score });
   return respond(200, result);
 });
 
-const RELEVANCE_SCHEMA = {
+const ACTION_ITEM_SCHEMA = {
   type: "object",
   properties: {
-    score: { type: "number", description: "Score geral de 0 a 100" },
-    summary: { type: "string", description: "Resumo de 2-3 frases" },
-    strengths: { type: "array", items: { type: "string" } },
-    improvements: { type: "array", items: { type: "string" } },
-    sub_scores: {
-      type: "object",
-      properties: {
-        relevancia_tematica: { type: "number" }, qualidade_conteudo: { type: "number" }, autoridade_percebida: { type: "number" },
-        otimizacao_llm: { type: "number" }, clareza_proposta_valor: { type: "number" },
-      },
-      required: ["relevancia_tematica", "qualidade_conteudo", "autoridade_percebida", "otimizacao_llm", "clareza_proposta_valor"],
-    },
-    compatibility_diagnostic: {
-      type: "object",
-      properties: {
-        conteudo_atual: { type: "string" }, conteudo_ideal: { type: "string" },
-        gap_analysis: { type: "array", items: { type: "string" } }, compatibility_percentage: { type: "number" },
-      },
-      required: ["conteudo_atual", "conteudo_ideal", "gap_analysis", "compatibility_percentage"],
-    },
-    action_plan: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          priority: { type: "string", enum: ["alta", "media", "baixa"] },
-          action: { type: "string" },
-          impact: { type: "string" },
-          category: { type: "string", enum: ["conteudo", "tecnico", "autoridade", "estrutura"] },
-          reason: { type: "string", description: "Por que esta ação é necessária" },
-          evidence: { type: "string", description: "Trecho literal do conteúdo ou descrição do sinal técnico. Vazio se for inferência." },
-          confidence: { type: "number", description: "0 a 1" },
-          basis: { type: "string", enum: ["signal", "content", "inference"] },
-          signal_ref: { type: "string", description: "id do problema técnico quando basis=signal" },
-        },
-        required: ["priority", "action", "impact", "category", "reason", "confidence", "basis"],
-      },
-    },
-    keywords_analysis: {
-      type: "object",
-      properties: { found: { type: "array", items: { type: "string" } }, missing: { type: "array", items: { type: "string" } }, suggested: { type: "array", items: { type: "string" } } },
-      required: ["found", "missing", "suggested"],
-    },
-    ideal_example: { type: "string", description: "Exemplo completo de conteúdo otimizado, em texto puro sem markdown." },
+    priority: { type: "string", enum: ["alta", "media", "baixa"] },
+    action: { type: "string" },
+    impact: { type: "string", description: "Impacto qualitativo. Não invente números." },
+    category: { type: "string", enum: ["conteudo", "tecnico", "autoridade", "estrutura"] },
+    reason: { type: "string", description: "Por que esta ação é necessária" },
+    evidence: { type: "string", description: "Trecho literal do conteúdo ou descrição do sinal técnico. Vazio se for inferência." },
+    confidence: { type: "number", description: "0 a 1" },
+    basis: { type: "string", enum: ["signal", "content", "inference"] },
+    signal_ref: { type: "string", description: "id do problema técnico quando basis=signal" },
+    affected_dimension: { type: "string", enum: ["semantic_relevance", "entity_clarity", "evidence_authority", "citation_readiness", "technical_geo"] },
   },
-  required: ["score", "summary", "strengths", "improvements", "sub_scores", "compatibility_diagnostic", "action_plan", "keywords_analysis", "ideal_example"],
-  additionalProperties: false,
+  required: ["priority", "action", "impact", "category", "reason", "confidence", "basis", "affected_dimension"],
 };
+
+const RELEVANCE_SCHEMA = buildV2ToolSchema(ACTION_ITEM_SCHEMA);

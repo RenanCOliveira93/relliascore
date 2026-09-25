@@ -1,3 +1,4 @@
+import { v2AnaliseColumns } from "../_shared/score-v2.ts";
 // Public REST API authenticated via workspace API keys (header: X-API-Key).
 // Endpoints:
 //   POST /public-api/analyze         → relevance analysis
@@ -143,6 +144,7 @@ serve(async (req) => {
         keywords_analysis: data.keywords_analysis ?? null,
         action_plan: data.action_plan ?? null,
         origem: "webhook_api",
+        ...v2AnaliseColumns(data),
       })
       .select("id")
       .single();
@@ -160,6 +162,7 @@ serve(async (req) => {
           action: i.action,
           impact: i.impact ?? null,
           category: i.category ?? null,
+          affected_dimension: i.affected_dimension ?? null,
         }));
       if (items.length > 0) await admin.from("plano_de_acao").insert(items);
     }
@@ -177,6 +180,12 @@ serve(async (req) => {
       keywords_analysis: data.keywords_analysis,
       summary: data.summary,
       source: "api",
+      score_version: data.score_version ?? "legacy",
+      content_score: data.content_score ?? null,
+      content_score_partial: data.content_score_partial ?? null,
+      score_dimensions: data.score_dimensions
+        ? Object.fromEntries(Object.entries(data.score_dimensions as Record<string, any>).map(([k, d]) => [k, { score: d?.score ?? null, source: d?.source, available: d?.available }]))
+        : null,
     });
 
     return json(200, data);

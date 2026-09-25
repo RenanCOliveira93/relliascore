@@ -26,6 +26,8 @@ const SUB_KEYS = ["relevancia_tematica", "qualidade_conteudo", "autoridade_perce
 const PRIORITIES = ["alta", "media", "baixa"];
 const CATEGORIES = ["conteudo", "tecnico", "autoridade", "estrutura"];
 
+export const AFFECTED_DIMENSIONS = ["semantic_relevance", "entity_clarity", "evidence_authority", "citation_readiness", "technical_geo"] as const;
+
 export interface ParsedActionItem {
   priority: "alta" | "media" | "baixa";
   action: string;
@@ -36,6 +38,30 @@ export interface ParsedActionItem {
   confidence?: number;
   basis?: "signal" | "content" | "inference";
   signal_ref?: string;
+  affected_dimension?: typeof AFFECTED_DIMENSIONS[number];
+}
+
+export function parseActionPlan(v: unknown, knownSignalIds: string[] = []): ParsedActionItem[] {
+  return (Array.isArray(v) ? v : [])
+    .filter((i: any) => i && typeof i.action === "string" && PRIORITIES.includes(i.priority))
+    .map((i: any) => {
+      const basis = ["signal", "content", "inference"].includes(i.basis) ? i.basis : "inference";
+      const ref = typeof i.signal_ref === "string" && knownSignalIds.includes(i.signal_ref) ? i.signal_ref : undefined;
+      const item: ParsedActionItem = {
+        priority: i.priority,
+        action: i.action,
+        impact: typeof i.impact === "string" ? i.impact : "",
+        category: CATEGORIES.includes(i.category) ? i.category : "conteudo",
+        reason: typeof i.reason === "string" ? i.reason : undefined,
+        evidence: typeof i.evidence === "string" && i.evidence.trim() ? i.evidence : undefined,
+        confidence: isNum(i.confidence) ? +clamp(i.confidence, 0, 1).toFixed(2) : undefined,
+        // A "signal" claim without a valid signal reference is downgraded to inference.
+        basis: basis === "signal" && !ref ? "inference" : basis,
+        signal_ref: ref,
+      };
+      if ((AFFECTED_DIMENSIONS as readonly string[]).includes(i.affected_dimension)) item.affected_dimension = i.affected_dimension;
+      return item;
+    });
 }
 
 export function validateRelevanceResult(raw: Record<string, unknown>, knownSignalIds: string[] = []): ParseResult<Record<string, unknown>> {
@@ -49,24 +75,7 @@ export function validateRelevanceResult(raw: Record<string, unknown>, knownSigna
   }
   const kw = (raw.keywords_analysis ?? {}) as Record<string, unknown>;
 
-  const action_plan: ParsedActionItem[] = (Array.isArray(raw.action_plan) ? raw.action_plan : [])
-    .filter((i: any) => i && typeof i.action === "string" && PRIORITIES.includes(i.priority))
-    .map((i: any) => {
-      const basis = ["signal", "content", "inference"].includes(i.basis) ? i.basis : "inference";
-      const ref = typeof i.signal_ref === "string" && knownSignalIds.includes(i.signal_ref) ? i.signal_ref : undefined;
-      return {
-        priority: i.priority,
-        action: i.action,
-        impact: typeof i.impact === "string" ? i.impact : "",
-        category: CATEGORIES.includes(i.category) ? i.category : "conteudo",
-        reason: typeof i.reason === "string" ? i.reason : undefined,
-        evidence: typeof i.evidence === "string" && i.evidence.trim() ? i.evidence : undefined,
-        confidence: isNum(i.confidence) ? +clamp(i.confidence, 0, 1).toFixed(2) : undefined,
-        // A "signal" claim without a valid signal reference is downgraded to inference.
-        basis: basis === "signal" && !ref ? "inference" : basis,
-        signal_ref: ref,
-      } as ParsedActionItem;
-    });
+  const action_plan = parseActionPlan(raw.action_plan, knownSignalIds);
 
   const sub_scores = Object.fromEntries(SUB_KEYS.map((k) => [k, Math.round(clamp(sub[k] as number, 0, 100))]));
   return {
