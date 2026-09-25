@@ -33,6 +33,8 @@ export interface SafeFetchOptions {
   fetchImpl?: typeof fetch;
   resolver?: HostResolver;
   userAgent?: string;
+  /** Accepted content types (default: HTML). */
+  acceptTypes?: string[];
 }
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "localhost.localdomain", "ip6-localhost", "ip6-loopback", "metadata.google.internal"]);
@@ -223,7 +225,7 @@ export async function safeFetch(rawUrl: string, opts: SafeFetchOptions = {}): Pr
       }
 
       const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
-      if (!HTML_TYPES.some((t) => contentType.includes(t))) {
+      if (!(opts.acceptTypes ?? HTML_TYPES).some((t) => contentType.includes(t))) {
         try { await res.body?.cancel(); } catch { /* ignore */ }
         return { ok: false, status: "unsupported_content", reason: "O endereço não retornou uma página HTML.", httpStatus: res.status, requestedUrl };
       }
