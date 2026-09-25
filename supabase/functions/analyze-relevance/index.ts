@@ -256,8 +256,8 @@ Faça a análise completa usando a função fornecida.`;
         userId, workspaceId, empresaId, origem: "app", inputType, mode, searchQuery,
         websiteUrl: inputType === "webpage" ? String(sourceMeta.final_url ?? websiteUrl) : null,
       });
-      const { data: saved, error: saveErr } = await admin.from("analises").insert(row).select("id").single();
-      if (saveErr) log("persist_failed", { code: saveErr.code });
+      const { data: saved, error: saveErr } = row ? await admin.from("analises").insert(row).select("id").single() : { data: null, error: { code: "invalid_row" } };
+      if (saveErr || !saved) log("persist_failed", { code: saveErr?.code });
       else {
         result.analysis_id = saved.id;
         const items = (r.action_plan ?? []).filter((i: any) => i?.action && i?.priority).map((i: any) => ({

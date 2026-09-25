@@ -1,3 +1,4 @@
+import { buildAnaliseRow } from "../_shared/persist.ts";
 import { v2AnaliseColumns } from "../_shared/score-v2.ts";
 // Public REST API authenticated via workspace API keys (header: X-API-Key).
 // Endpoints:
@@ -133,19 +134,11 @@ serve(async (req) => {
     // Persist analise (conteudo)
     const { data: analiseRow } = await admin
       .from("analises")
-      .insert({
-        user_id,
-        workspace_id,
-        empresa_id,
-        tipo: "conteudo",
-        score: data.score ?? null,
-        summary: data.summary ?? null,
-        sub_scores: data.sub_scores ?? null,
-        keywords_analysis: data.keywords_analysis ?? null,
-        action_plan: data.action_plan ?? null,
-        origem: "webhook_api",
-        ...v2AnaliseColumns(data),
-      })
+      .insert(buildAnaliseRow(data, {
+        userId: user_id, workspaceId: workspace_id, empresaId: empresa_id, origem: "webhook_api",
+        inputType: body.inputType === "text" ? "text" : "webpage", mode: body.mode ?? "business",
+        searchQuery: body.searchQuery ?? "", websiteUrl: body.websiteUrl ?? null,
+      }))
       .select("id")
       .single();
 
