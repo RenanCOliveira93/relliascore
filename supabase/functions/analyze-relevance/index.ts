@@ -117,7 +117,7 @@ serve(async (req) => {
   const signalIds = technicalSignals?.issues.map((i) => i.id) ?? [];
   const modeContext = mode === "influencer"
     ? `O contexto é de um INFLUENCER / MARCA PESSOAL. Foque em: autoridade pessoal, presença digital, tom de voz autêntico, engajamento percebido, conexão com a audiência, storytelling, prova social e posicionamento como referência no nicho.`
-    : `O contexto é de uma EMPRESA / EMPREENDIMENTO. Foque em: SEO técnico, autoridade de domínio, proposta de valor clara, conversão, competitividade no mercado, credibilidade institucional e otimização para buscas comerciais.`;
+    : `O contexto é de uma EMPRESA / EMPREENDIMENTO. Foque em: SEO técnico, evidências de credibilidade presentes no conteúdo, proposta de valor clara, conversão, competitividade no mercado, credibilidade institucional e otimização para buscas comerciais.`;
   const textContext = inputType === "text"
     ? `IMPORTANTE: Este texto ainda NÃO foi publicado. Analise como se fosse ser postado. Forneça um exemplo completo de texto ideal (score próximo a 100%) mantendo a essência do original.`
     : `Forneça um exemplo de conteúdo ideal (score próximo a 100%) que a página deveria ter para ser perfeitamente relevante para a pesquisa.`;
