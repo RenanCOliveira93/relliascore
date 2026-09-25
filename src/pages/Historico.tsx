@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VideoBackground from "@/components/VideoBackground";
-import { ArrowLeft, History, FileText, Sparkles, Swords } from "lucide-react";
+import { ArrowLeft, History, FileText, FileDown, Sparkles, Swords } from "lucide-react";
+import { generateAnalysisPdf } from "@/lib/generatePdf";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ScoreDisplay from "@/components/ScoreDisplay";
@@ -176,7 +177,7 @@ const Historico = () => {
                             {new Date(a.created_at).toLocaleString("pt-BR")} · origem: {a.origem}
                             {a.score_version === "2.0" ? " · Score 2.0" : " · legado"}
                             {a.content_score_partial ? " (parcial, texto)" : ""}
-                            {a.website_url ? ` · ${a.website_url}` : a.input_type === "text" ? " · Texto" : ""}
+                            {a.website_url ? ` · ${a.website_url}` : a.input_type === "text" ? " · Análise de conteúdo (texto)" : ""}
                           </CardDescription>
                           {a.search_query && <p className="text-xs text-muted-foreground italic mt-1 line-clamp-1">Intenção: "{a.search_query}"</p>}
                         </div>
@@ -229,7 +230,19 @@ const Historico = () => {
       </div>
       <Dialog open={!!opened} onOpenChange={(o) => !o && setOpened(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader><DialogTitle>Diagnóstico salvo</DialogTitle></DialogHeader>
+          <DialogHeader className="flex-row items-center justify-between gap-3 space-y-0 pr-6">
+            <DialogTitle>Diagnóstico salvo</DialogTitle>
+            {opened && (
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => generateAnalysisPdf(
+                rowToResult(opened),
+                opened.website_url ?? "Análise de conteúdo",
+                opened.search_query ?? "",
+                opened.analysis_mode === "influencer" ? "influencer" : "business",
+              )}>
+                <FileDown className="h-4 w-4" /> Exportar PDF
+              </Button>
+            )}
+          </DialogHeader>
           {opened && (
             <ScoreDisplay
               result={rowToResult(opened)}
