@@ -33,14 +33,18 @@ export function interpretScores(content: number, brand: number | null): string |
 }
 
 /** Which Brand Profile section a knowledge reference belongs to (for "Ver no Brand Profile"). */
-export function profileSectionFor(ref: string | null, s: BrandContextSnapshot | undefined): string | null {
-  if (!ref || !s) return null;
+export function profileSectionFor(ref: string | null, snap: BrandContextSnapshot | undefined): string | null {
+  if (!ref || !snap) return null;
+  const s = { ...snap, positioning_ref_ids: [snap.preferred_positioning?.ref, snap.observed_positioning?.ref].filter(Boolean) as string[] };
+  if (ref === "field:positioning" || s.positioning_ref_ids?.includes(ref)) return "positioning";
   if (ref.startsWith("field:")) return "overview";
   const has = (l: { id: string }[]) => l.some((x) => x.id === ref);
   if (has(s.offerings)) return "offerings";
-  if (has(s.audiences) || has(s.problems)) return "audiences";
+  if (has(s.audiences)) return "audiences";
+  if (has(s.problems)) return "problems";
   if (has(s.differentiators)) return "differentiators";
-  if (has(s.claims) || has(s.evidence)) return "claims";
+  if (has(s.claims)) return "claims";
+  if (has(s.evidence)) return "evidence";
   if (has(s.entities)) return "entities";
   if (s.voice?.id === ref) return "voice";
   return null;
