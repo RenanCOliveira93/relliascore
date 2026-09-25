@@ -31,6 +31,53 @@ export interface PageExtraction {
   modified_date: string | null;
   word_count: number;
   html_truncated: boolean;
+  /** Technical GEO 2.0 extras (deterministic). */
+  heading_levels: number[];
+  empty_headings_count: number;
+  list_count: number;
+  has_contact_links: boolean;
+  generic_anchor_count: number;
+  og_type: string | null;
+  schema_entity: SchemaEntity | null;
+}
+
+export interface SchemaEntity {
+  type: string;
+  name: string | null;
+  has_logo: boolean;
+  same_as_count: number;
+  has_address: boolean;
+  has_contact: boolean;
+}
+
+const ENTITY_SCHEMA_TYPES = ["Organization", "Corporation", "LocalBusiness", "Person", "ProfessionalService", "Store", "Restaurant", "EducationalOrganization", "NGO"];
+const GENERIC_ANCHOR = /^(clique aqui|clique|saiba mais|leia mais|veja mais|aqui|mais|click here|here|read more|learn more|more)$/i;
+
+function findSchemaEntity(nodes: unknown[]): SchemaEntity | null {
+  const stack = [...nodes];
+  let guard = 0;
+  while (stack.length && guard++ < 2000) {
+    const n = stack.shift();
+    if (Array.isArray(n)) { stack.push(...n); continue; }
+    if (!n || typeof n !== "object") continue;
+    const o = n as Record<string, unknown>;
+    const t = o["@type"];
+    const types = typeof t === "string" ? [t] : Array.isArray(t) ? t.filter((x): x is string => typeof x === "string") : [];
+    const hit = types.find((x) => ENTITY_SCHEMA_TYPES.includes(x));
+    if (hit) {
+      const sameAs = o.sameAs;
+      return {
+        type: hit,
+        name: typeof o.name === "string" && o.name.trim() ? o.name.trim().slice(0, 200) : null,
+        has_logo: !!o.logo || !!o.image,
+        same_as_count: Array.isArray(sameAs) ? sameAs.length : typeof sameAs === "string" ? 1 : 0,
+        has_address: !!o.address || !!o.location,
+        has_contact: !!o.telephone || !!o.email || !!o.contactPoint,
+      };
+    }
+    stack.push(...Object.values(o).filter((x) => typeof x === "object"));
+  }
+  return null;
 }
 
 const clean = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, " ").trim();
@@ -77,6 +124,8 @@ export function extractPage(html: string, meta: { requestedUrl: string; finalUrl
     h1: [], h2: [], h3: [], main_text: "", content_blocks: [], internal_links: [], external_links: [],
     images: [], json_ld: [], json_ld_invalid_count: 0, schema_types: [], open_graph: {},
     author: null, published_date: null, modified_date: null, word_count: 0, html_truncated: !!meta.htmlTruncated,
+    heading_levels: [], empty_headings_count: 0, list_count: 0, has_contact_links: false, generic_anchor_count: 0,
+    og_type: null, schema_entity: null,
   };
   if (!doc) return empty;
 
@@ -103,6 +152,11 @@ export function extractPage(html: string, meta: { requestedUrl: string; finalUrl
 
   const headings = (tag: string) =>
     Array.from(doc.querySelectorAll(tag)).map((h) => clean((h as Element).textContent)).filter(Boolean).slice(0, 50);
+
+  const headingEls = Array.from(doc.querySelectorAll("h1,h2,h3,h4,h5,h6")).slice(0, 300) as Element[];
+  const heading_levels = headingEls.map((h) => Number(h.tagName.slice(1)));
+  const empty_headings_count = headingEls.filter((h) => !clean(h.textContent) && !h.querySelector("img[alt]")).length;
+  const has_contact_links = !!doc.querySelector('a[href^="tel:"], a[href^="mailto:"]');
 
   // Links & images (from full document)
   const internal_links: ExtractedLink[] = [];
@@ -151,6 +205,7 @@ export function extractPage(html: string, meta: { requestedUrl: string; finalUrl
       if (t) content_blocks.push({ tag: "div", text: t, index: 0 });
     }
   }
+  const list_count = root ? root.querySelectorAll("ul,ol").length : 0;
   const main_text = content_blocks.map((b) => b.text).join("\n");
   const word_count = main_text ? main_text.split(/\s+/).filter(Boolean).length : 0;
 
@@ -168,5 +223,9 @@ export function extractPage(html: string, meta: { requestedUrl: string; finalUrl
     published_date: metaContent('meta[property="article:published_time"]') ?? findInJsonLd(json_ld, "datePublished"),
     modified_date: metaContent('meta[property="article:modified_time"]') ?? findInJsonLd(json_ld, "dateModified"),
     word_count,
+    heading_levels, empty_headings_count, list_count, has_contact_links,
+    generic_anchor_count: [...internal_links, ...external_links].filter((l) => GENERIC_ANCHOR.test(l.text)).length,
+    og_type: open_graph["og:type"] ?? null,
+    schema_entity: findSchemaEntity(json_ld),
   };
 }

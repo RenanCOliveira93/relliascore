@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { dispatchWebhooks } from "../_shared/webhooks.ts";
 import { safeFetch } from "../_shared/url-safety.ts";
 import { extractPage } from "../_shared/extract.ts";
+import { fetchRobots, type RobotsResult } from "../_shared/robots.ts";
+import { buildAnaliseRow } from "../_shared/persist.ts";
 import { computeTechnicalSignals, hasEnoughContent, type TechnicalSignals } from "../_shared/signals.ts";
 import { budgetBlocks, budgetPlainText, metadataSection, type ContentPayload } from "../_shared/content-budget.ts";
 import { extractToolArguments } from "../_shared/model-parse.ts";
@@ -83,6 +85,7 @@ serve(async (req) => {
 
   // ---- Content acquisition ----
   let technicalSignals: TechnicalSignals | null = null;
+  let robots: RobotsResult | null = null;
   let payload: ContentPayload;
   let metadata = "";
   let sourceMeta: Record<string, unknown> = {};
@@ -97,11 +100,15 @@ serve(async (req) => {
       return fail(fetched.status, fetched.reason, { http_status: fetched.httpStatus ?? null });
     }
     log("crawl_completed", { http_status: fetched.httpStatus, redirects: fetched.redirects, bytes_truncated: fetched.bodyTruncated });
+    // Single robots.txt read (same origin, SSRF-safe, 4s cap). Never blocks the analysis.
+    const robotsPromise = fetchRobots(fetched.finalUrl).catch(() => null);
 
     const page = extractPage(fetched.body, {
       requestedUrl: fetched.requestedUrl, finalUrl: fetched.finalUrl, httpStatus: fetched.httpStatus, htmlTruncated: fetched.bodyTruncated,
     });
-    technicalSignals = computeTechnicalSignals(page);
+    technicalSignals = computeTechnicalSignals(page, { contentType: fetched.contentType });
+    robots = await robotsPromise;
+    log("robots_checked", { status: robots?.status ?? "unavailable" });
     log("extraction_completed", { word_count: page.word_count, blocks: page.content_blocks.length, schemas: page.schema_types.length });
 
     if (!hasEnoughContent(page)) {
@@ -187,7 +194,7 @@ Faça a análise completa usando a função fornecida.`;
     return fail("analysis_failed", "Não foi possível interpretar a resposta da IA. Tente novamente.");
   }
   if (validated.value.ignored_fields.length) log("llm_forbidden_fields_ignored", { fields: validated.value.ignored_fields });
-  const scored = buildV2Scores(validated.value, technicalSignals);
+  const scored = buildV2Scores(validated.value, technicalSignals, { robots });
   if (!scored.ok) {
     log("score_failed", { reason: scored.reason });
     return fail("analysis_failed", "Não foi possível calcular o score com segurança. Tente novamente.");
@@ -217,7 +224,9 @@ Faça a análise completa usando a função fornecida.`;
     entity_signals: v2.entity_signals,
     content_claims: v2.content_claims,
     technical_geo_checks: v2.technical_geo_checks,
-    analysis_id: requestId,
+    technical_geo: v2.technical_geo,
+    dimensions_used: v2.dimensions_used,
+    analysis_id: requestId as string,
     technical_signals: technicalSignals,
     // Only what the model produced (no overall score — that is computed by the backend).
     llm_assessment: {
@@ -234,9 +243,36 @@ Faça a análise completa usando a função fornecida.`;
     },
   };
 
+  // Persist successful member-area analyses (public-api persists its own calls). Failures never reach here.
+  if (auth.kind === "user" && workspaceId && userId) {
+    try {
+      let empresaId: string | null = null;
+      const host = (() => { try { return new URL(String(sourceMeta.final_url ?? websiteUrl)).hostname.replace(/^www\./, ""); } catch { return null; } })();
+      if (host) {
+        const { data: emps } = await admin.from("empresas").select("id,url").eq("workspace_id", workspaceId);
+        empresaId = (emps ?? []).find((e: any) => { try { return new URL(/^https?:/i.test(e.url) ? e.url : `https://${e.url}`).hostname.replace(/^www\./, "") === host; } catch { return false; } })?.id ?? null;
+      }
+      const row = buildAnaliseRow(result, {
+        userId, workspaceId, empresaId, origem: "app", inputType, mode, searchQuery,
+        websiteUrl: inputType === "webpage" ? String(sourceMeta.final_url ?? websiteUrl) : null,
+      });
+      const { data: saved, error: saveErr } = row ? await admin.from("analises").insert(row).select("id").single() : { data: null, error: { code: "invalid_row" } };
+      if (saveErr || !saved) log("persist_failed", { code: saveErr?.code });
+      else {
+        result.analysis_id = saved.id;
+        const items = (r.action_plan ?? []).filter((i: any) => i?.action && i?.priority).map((i: any) => ({
+          user_id: userId, workspace_id: workspaceId, empresa_id: empresaId, analise_id: saved.id,
+          priority: i.priority, action: i.action, impact: i.impact ?? null, category: i.category ?? null, affected_dimension: i.affected_dimension ?? null,
+        }));
+        if (items.length) await admin.from("plano_de_acao").insert(items);
+        log("persisted");
+      }
+    } catch { log("persist_failed"); }
+  }
+
   if (auth.kind === "user" && workspaceId) {
     dispatchWebhooks(workspaceId, "analysis.completed", {
-      analysis_id: requestId, mode, input_type: inputType, website_url: websiteUrl ?? null, search_query: searchQuery,
+      analysis_id: result.analysis_id, mode, input_type: inputType, website_url: websiteUrl ?? null, search_query: searchQuery,
       score: r.score, sub_scores: r.sub_scores, action_plan: r.action_plan, keywords_analysis: r.keywords_analysis,
       summary: r.summary, technical_signals: technicalSignals, source: "app",
       score_version: v2.score_version, content_score: v2.content_score, content_score_partial: v2.content_score_partial,

@@ -7,6 +7,7 @@ import SubScoresRadar from "./SubScoresRadar";
 import CompatibilityDiagnostic from "./CompatibilityDiagnostic";
 import ActionPlan from "./ActionPlan";
 import KeywordAnalysis from "./KeywordAnalysis";
+import TechnicalGeoAudit from "./TechnicalGeoAudit";
 import type { AnalysisResult } from "@/types/analysis";
 
 interface ScoreDisplayProps {
@@ -94,6 +95,10 @@ const ScoreDisplay = ({ result }: ScoreDisplayProps) => {
 
         <TabsContent value="scores">
           {result.sub_scores && <SubScoresRadar subScores={result.sub_scores} dimensions={result.score_dimensions} />}
+          {result.score_version === "2.0" && result.content_score_partial && (
+            <p className="text-xs text-muted-foreground mt-3">Score parcial: Technical GEO não se aplica a texto pré-publicação (N/D). Os pesos das outras quatro dimensões foram redistribuídos; não compare diretamente com análises de URL.</p>
+          )}
+          {result.technical_geo && <div className="mt-4"><TechnicalGeoAudit audit={result.technical_geo} /></div>}
         </TabsContent>
 
         <TabsContent value="diagnostic">

@@ -174,6 +174,27 @@ export interface ContentScoreV2Fields {
   citation_readiness?: CitationReadiness;
   entity_signals?: EntitySignal[];
   content_claims?: ContentClaim[];
+  dimensions_used?: DimensionKey[];
+  technical_geo?: TechnicalGeoAudit | null;
+}
+
+// ---------- Technical GEO 2.0 (ruleset v1) ----------
+export type RuleStatus = "pass" | "warning" | "fail" | "not_applicable" | "unavailable";
+export type RuleSeverity = "info" | "low" | "medium" | "high" | "critical";
+export interface TechnicalGeoRule {
+  id: string; version: string; category: string; label: string; description: string;
+  max_points: number; status: RuleStatus; score: number | null; evidence: string; recommendation: string | null; severity: RuleSeverity;
+}
+export interface TechnicalGeoAudit {
+  technical_geo_version: string;
+  page_type: { page_type: string; confidence: number; source: string };
+  score: number;
+  coverage: number;
+  rules: TechnicalGeoRule[];
+  critical_issues: { rule_id: string; label: string; evidence: string; recommendation: string | null }[];
+  quick_wins: { rule_id: string; label: string; evidence: string; recommendation: string | null; severity: RuleSeverity }[];
+  structured_data_recommendations: { schema_type: string; reason: string; applicable: boolean; priority: "high" | "medium" | "low" }[];
+  ai_crawler_access: { status: string; crawlers: { token: string; operator: string; category: string; verdict: string; matched_rule: string | null }[]; note: string } | null;
 }
 
 export const scoreVersionOf = (r: { score_version?: string | null } | null | undefined): ScoreVersion =>
