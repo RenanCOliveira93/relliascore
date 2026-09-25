@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import type { AnalysisResult } from "@/types/analysis";
+import { DIMENSION_LABELS, type AnalysisResult, type DimensionKey } from "@/types/analysis";
 
 const COLORS = {
   primary: [99, 102, 241] as [number, number, number],
