@@ -74,6 +74,15 @@ const Index = () => {
     supabase.from("empresas").select("id,nome,url,linkedin_url,instagram_url,descricao").eq("workspace_id", activeWorkspace.id).order("nome")
       .then(({ data }) => setBrandEmpresas((data ?? []) as BrandFormEmpresa[]));
   }, [activeWorkspace]);
+  // 03C: optional company context for brand-aware analysis (server re-verifies ownership and resolves the active Brand Brain).
+  const [relEmpresaId, setRelEmpresaId] = useState<string | null>(null);
+  const [relBrain, setRelBrain] = useState<{ version: number } | null | undefined>(undefined);
+  useEffect(() => {
+    if (!relEmpresaId) { setRelBrain(undefined); return; }
+    setRelBrain(undefined);
+    supabase.from("brand_brains").select("version").eq("empresa_id", relEmpresaId).eq("is_active", true).maybeSingle()
+      .then(({ data }) => setRelBrain(data ? { version: data.version } : null));
+  }, [relEmpresaId]);
   const { planConfig, canAnalyze, remainingAnalyses, subscription, refreshSubscription } = useSubscription();
 
   const handleAnalyze = async () => {
@@ -105,7 +114,7 @@ const Index = () => {
       try {
         if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null, clientRequestId: crypto.randomUUID() }
+          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null, empresaId: relEmpresaId, clientRequestId: crypto.randomUUID() }
         });
         if (error) {
           const f = await readFunctionError(error);
@@ -134,7 +143,7 @@ const Index = () => {
       try {
         if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null, clientRequestId: crypto.randomUUID() }
+          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null, empresaId: relEmpresaId, clientRequestId: crypto.randomUUID() }
         });
         if (error) {
           const f = await readFunctionError(error);
@@ -357,6 +366,23 @@ const Index = () => {
                           <p className="text-xs text-muted-foreground">Cole o conteúdo que pretende publicar para receber sugestões antes da publicação</p>
                         </div>
                       )}
+
+                      <div className="space-y-2">
+                        <label htmlFor="rel-empresa" className="text-sm font-medium">Empresa (opcional)</label>
+                        <select id="rel-empresa" aria-label="Empresa (opcional)" className="h-11 w-full rounded-md border border-input bg-input/50 px-3 text-sm"
+                          value={relEmpresaId ?? ""} onChange={(e) => setRelEmpresaId(e.target.value || null)}>
+                          <option value="">Nenhuma — apenas Content Score</option>
+                          {brandEmpresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                        </select>
+                        {!relEmpresaId && <p className="text-xs text-muted-foreground">Selecione uma empresa para avaliar também o alinhamento com a marca.</p>}
+                        {relEmpresaId && relBrain && <p className="text-xs text-success">Modo Brand-aware · Brand Brain v{relBrain.version}</p>}
+                        {relEmpresaId && relBrain === null && (
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>Esta empresa ainda não possui Brand Profile. A análise continuará sem contexto de marca.</span>
+                            <Button asChild size="sm" variant="outline" className="h-7"><a href={`/home?tab=brand&empresa=${relEmpresaId}`}>Criar Brand Profile</a></Button>
+                          </div>
+                        )}
+                      </div>
 
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Pesquisa ou Problema</label>

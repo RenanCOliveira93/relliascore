@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ScoreDisplay from "@/components/ScoreDisplay";
 import { rowToResult } from "@/lib/diagnosis";
+import { historyBadge } from "@/lib/brand-alignment-view";
 
 interface Empresa {
   id: string;
@@ -179,6 +180,7 @@ const Historico = () => {
                             {a.content_score_partial ? " (parcial, texto)" : ""}
                             {a.website_url ? ` · ${a.website_url}` : a.input_type === "text" ? " · Análise de conteúdo (texto)" : ""}
                           </CardDescription>
+                          {historyBadge(a) && <p className="text-xs text-muted-foreground mt-1" data-testid="history-brand-badge"><span className="text-success">Brand-aware</span> · {historyBadge(a)!.company ?? "—"} · Brand Alignment {historyBadge(a)!.score ?? "N/D"}</p>}
                           {a.search_query && <p className="text-xs text-muted-foreground italic mt-1 line-clamp-1">Intenção: "{a.search_query}"</p>}
                         </div>
                       </div>

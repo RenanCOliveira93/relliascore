@@ -7,6 +7,7 @@ import {
   basisLabel, claimCounts, CLAIM_STATUS_LABEL, crawlerGroups, DIMENSION_ORDER, executiveSummary, groupActionsByDimension,
   groupRules, importantClaims, mergeActions, RULE_STATUS_LABEL, strengthsOf, topPriorities, verdictLabel, weightedBreakdown,
 } from "./diagnosis";
+import { BA_LABELS, BA_ORDER, GAP_TYPE_LABEL, isBrandAware } from "./brand-alignment-view";
 
 export const PDF_V2_SECTIONS = [
   "1. Resumo executivo", "2. RELLIA Content Score", "3. Cinco dimensões", "4. Principais prioridades", "5. Pontos fortes",
@@ -76,6 +77,22 @@ export function buildAnalysisPdfV2(r: AnalysisResult, source: string, query: str
   body("Mede o quanto o conteúdo está preparado para comunicar tema, entidade, evidências e estrutura a sistemas de busca e IA. Não representa a frequência com que IAs recomendam a marca.", 8, COLORS.muted, "italic");
   if (r.content_score_partial) body("Score parcial: Technical GEO não se aplica a textos pré-publicação; os pesos foram redistribuídos entre as dimensões de conteúdo.", 8, COLORS.muted, "italic");
   y += 4;
+
+  if (isBrandAware(r)) {
+    title("Alinhamento com a Marca");
+    const bs = typeof r.brand_alignment_score === "number" ? Math.round(r.brand_alignment_score) : null;
+    body(`Brand Alignment: ${bs ?? "N/D"}/100${r.brand_alignment_partial ? " (parcial)" : ""} - Brand Brain v${r.brand_context_snapshot?.brand_brain_version} - ${r.brand_context_snapshot?.company_name ?? ""}`, 11, COLORS.dark, "bold");
+    body("Mede o alinhamento do conteúdo ao conhecimento preferencial da marca. Independente do Content Score; os dois não são combinados.", 8, COLORS.muted, "italic");
+    for (const k of BA_ORDER) {
+      const d = r.brand_alignment_dimensions?.[k];
+      body(`${BA_LABELS[k]}: ${d?.available && d.score !== null ? `${Math.round(d.score)} (peso ${pct(r.brand_alignment_weights_applied?.[k] ?? null)})` : "N/D - fora do cálculo"}`, 10, COLORS.dark, "bold");
+      if (d?.reason) body(d.reason, 9, COLORS.muted);
+    }
+    if (r.brand_strengths?.length) { body("O que o conteúdo reforça", 10, COLORS.dark, "bold"); r.brand_strengths.slice(0, 5).forEach((x) => bullet(x.statement)); }
+    if (r.brand_gaps?.length) { body("Lacunas de marca", 10, COLORS.dark, "bold"); r.brand_gaps.slice(0, 5).forEach((x) => bullet(`${GAP_TYPE_LABEL[x.gap_type]}: ${x.statement}`)); }
+    if (r.brand_recommendations?.length) { body("Recomendações de marca", 10, COLORS.dark, "bold"); r.brand_recommendations.slice(0, 5).forEach((x) => bullet(x.text)); }
+    y += 4;
+  }
 
   title(PDF_V2_SECTIONS[2]);
   const bd = weightedBreakdown(r);
