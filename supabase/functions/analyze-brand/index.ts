@@ -134,7 +134,7 @@ Além disso, preencha brand_brain com conhecimento ESTRUTURADO: cada item indica
   const result = { ...legacy, status: "success", analysis_id: requestId, sources_status: sources } as any;
 
   // Brand Brain: persisted as a new version only for a company owned by this user in this workspace.
-  const ownerId = auth.kind === "user" ? auth.userId : auth.userId;
+  const ownerId = auth.userId;
   const primaryDomain = hostOf(brainSources.find((s) => s.source === "website" && s.status === "fetched")?.url ?? (typeof website === "string" ? website : ""));
   const brain = normalizeBrandBrain(rawBrain, { sources: brainSources, primaryDomain });
   let brandBrain: Record<string, unknown> = { persisted: false, sources_status: brainSources, dropped_items: brain.dropped };
