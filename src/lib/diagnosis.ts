@@ -303,8 +303,14 @@ export function rowToResult(row: Record<string, any>): AnalysisResult {
         ai_crawler_access: row.ai_crawler_access ?? null,
       }
     : null;
+  const snapshot_missing = [
+    row.strengths == null ? "pontos fortes" : null,
+    row.optimized_version == null ? "versão otimizada" : null,
+    row.current_vs_ideal == null ? "atual × ideal" : null,
+  ].filter((x): x is string => !!x);
   return {
     ...base,
+    snapshot_missing,
     score_version: "2.0",
     content_score: row.content_score ?? undefined,
     content_score_partial: row.content_score_partial === true,
@@ -317,4 +323,9 @@ export function rowToResult(row: Record<string, any>): AnalysisResult {
     citation_readiness: row.citation_readiness ?? undefined,
     technical_geo: tg,
   };
+}
+
+/** Snapshot parts absent from a reopened 2.0 row (saved before they were persisted). Live results → []. */
+export function missingSnapshotParts(r: AnalysisResult): string[] {
+  return r.snapshot_missing ?? [];
 }
