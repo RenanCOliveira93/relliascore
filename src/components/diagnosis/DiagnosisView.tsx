@@ -13,6 +13,8 @@ import {
   weightedBreakdown, type DisplayAction, type Tone,
 } from "@/lib/diagnosis";
 import TechnicalGeoAudit, { pageTypeLabel } from "@/components/TechnicalGeoAudit";
+import CompatibilityDiagnostic from "@/components/CompatibilityDiagnostic";
+import { missingSnapshotParts } from "@/lib/diagnosis";
 import { Bar, Confidence, Help, Pill, Section, TONE_TEXT } from "./primitives";
 
 export interface DiagnosisContext { source?: string; query?: string; inputType?: "webpage" | "text" }
@@ -320,7 +322,19 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
             </AccordionContent>
           </AccordionItem>
         )}
+
+        {r.compatibility_diagnostic && (
+          <AccordionItem value="current-ideal" className="rounded-xl border border-border bg-card/70 px-5">
+            <AccordionTrigger className="text-left">Atual × ideal</AccordionTrigger>
+            <AccordionContent><CompatibilityDiagnostic diagnostic={r.compatibility_diagnostic} /></AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
+      {missingSnapshotParts(r).length > 0 && (
+        <p className="text-xs text-muted-foreground px-1">
+          Não disponível nesta análise salva: {missingSnapshotParts(r).join(", ")}. Ela foi registrada antes de o histórico guardar essas partes.
+        </p>
+      )}
     </div>
   );
 };
