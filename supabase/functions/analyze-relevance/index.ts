@@ -3,7 +3,7 @@ import { dispatchWebhooks } from "../_shared/webhooks.ts";
 import { safeFetch } from "../_shared/url-safety.ts";
 import { extractPage } from "../_shared/extract.ts";
 import { fetchRobots, type RobotsResult } from "../_shared/robots.ts";
-import { buildAnaliseRow } from "../_shared/persist.ts";
+import { buildAnaliseRow, normalizeRequestId } from "../_shared/persist.ts";
 import { computeTechnicalSignals, hasEnoughContent, type TechnicalSignals } from "../_shared/signals.ts";
 import { budgetBlocks, budgetPlainText, metadataSection, type ContentPayload } from "../_shared/content-budget.ts";
 import { extractToolArguments } from "../_shared/model-parse.ts";
@@ -37,6 +37,7 @@ serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return respond(400, { error: "JSON inválido." }); }
   const { websiteUrl, searchQuery, mode = "business", inputType = "webpage", content } = body ?? {};
+  const clientRequestId = normalizeRequestId(body?.clientRequestId);
 
   // Workspace: user calls must own the workspace; internal calls trust public-api's validated key.
   let workspaceId: string | null = null;
@@ -44,6 +45,18 @@ serve(async (req) => {
   if (auth.kind === "user") {
     try { workspaceId = await verifyWorkspace(admin, auth.userId, body?.workspaceId); }
     catch { return respond(403, { error: "Workspace não encontrado ou sem permissão." }); }
+    // No workspace sent (e.g. switcher still loading): fall back to the user's own default workspace
+    // so a completed analysis is never silently left out of the history.
+    if (!workspaceId) {
+      const { data: ws } = await admin.from("workspaces").select("id").eq("user_id", auth.userId).order("created_at", { ascending: true }).limit(1).maybeSingle();
+      workspaceId = ws?.id ?? null;
+      log("workspace_defaulted", { found: !!workspaceId });
+    }
+    // Idempotency: the same execution id never runs (nor consumes quota) twice.
+    if (clientRequestId) {
+      const { data: dup } = await admin.from("analises").select("id").eq("user_id", auth.userId).eq("request_id", clientRequestId).maybeSingle();
+      if (dup) { log("duplicate_request"); return respond(409, { status: "duplicate", error: "Esta análise já foi concluída e está no histórico.", analysis_id: dup.id }); }
+    }
     const allowed = await checkRateLimits(admin, "analyze-relevance", [
       { key: `user:${auth.userId}`, max: 10, windowSeconds: 60 },
       ...(workspaceId ? [{ key: `ws:${workspaceId}`, max: 20, windowSeconds: 60 }] : []),
