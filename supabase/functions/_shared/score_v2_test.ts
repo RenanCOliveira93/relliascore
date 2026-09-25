@@ -151,8 +151,8 @@ Deno.test("v2: evidence readiness counts and scores", () => {
     assertEquals(er.factual_claims, 2);
     assertEquals(er.supported_claims, 1);
     assertEquals(er.unsupported_claims, 1);
-    // statistics 15 + cases 10 of 100 + claim support 15*0.5 → 32.5/115
-    assertEquals(er.score, Math.round((32.5 / 115) * 10000) / 100);
+    // items total 85 + claim support 15 = 100 → statistics 15 + cases 10 + 15*0.5 = 32.5
+    assertEquals(er.score, 32.5);
     assertEquals(b.value.score_dimensions.evidence_authority.source, "llm");
   }
 });
