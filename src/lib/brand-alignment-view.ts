@@ -24,7 +24,7 @@ export const isBrandAware = (r: BrandAwareFields | null | undefined) => !!r?.bra
 /** Two independent readings; never a combined/average score. */
 export function interpretScores(content: number, brand: number | null): string | null {
   if (brand === null) return null;
-  const hi = (n: number) => n >= 75, lo = (n: number) => n < 60;
+  const hi = (n: number) => n >= 75, lo = (n: number) => n < 65;
   if (hi(content) && lo(brand)) return "O conteúdo está estruturalmente forte para o tema, mas representa apenas parcialmente o posicionamento e os diferenciais definidos para esta marca.";
   if (lo(content) && hi(brand)) return "O conteúdo representa bem a marca, mas ainda apresenta limitações de estrutura, evidência ou citabilidade.";
   if (hi(content) && hi(brand)) return "O conteúdo está bem preparado para o tema e representa bem a marca.";
