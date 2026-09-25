@@ -55,12 +55,14 @@ BEGIN
   BEGIN INSERT INTO public.brand_offerings(brand_brain_id, name, type, source_type, confidence, explicit_or_inferred) VALUES (v2,'hack','product','website',0.5,'inferred');
   EXCEPTION WHEN insufficient_privilege THEN ok := true; END;
   IF NOT ok THEN RAISE EXCEPTION 'FAIL B inserted'; END IF;
-  ok := false;
-  BEGIN UPDATE public.brand_brains SET company_name = 'hack' WHERE id = v2; EXCEPTION WHEN insufficient_privilege THEN ok := true; END;
-  IF NOT ok THEN RAISE EXCEPTION 'FAIL B updated'; END IF;
-  ok := false;
-  BEGIN DELETE FROM public.brand_brains WHERE id = v2; EXCEPTION WHEN insufficient_privilege THEN ok := true; END;
-  IF NOT ok THEN RAISE EXCEPTION 'FAIL B deleted'; END IF;
+  -- UPDATE/DELETE: either no privilege or RLS filters every row (0 affected).
+  n := 0;
+  BEGIN UPDATE public.brand_brains SET company_name = 'hack' WHERE id = v2; GET DIAGNOSTICS n = ROW_COUNT; EXCEPTION WHEN insufficient_privilege THEN n := 0; END;
+  IF n <> 0 THEN RAISE EXCEPTION 'FAIL B updated'; END IF;
+  BEGIN DELETE FROM public.brand_brains WHERE id = v2; GET DIAGNOSTICS n = ROW_COUNT; EXCEPTION WHEN insufficient_privilege THEN n := 0; END;
+  IF n <> 0 THEN RAISE EXCEPTION 'FAIL B deleted'; END IF;
+  BEGIN DELETE FROM public.brand_offerings WHERE brand_brain_id = v2; GET DIAGNOSTICS n = ROW_COUNT; EXCEPTION WHEN insufficient_privilege THEN n := 0; END;
+  IF n <> 0 THEN RAISE EXCEPTION 'FAIL B deleted children'; END IF;
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
   SET LOCAL ROLE authenticated;
