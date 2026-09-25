@@ -276,7 +276,7 @@ const BrandProfile = () => {
         {!offeringCards.length && <EmptyLine>Nenhum produto ou serviço identificado.</EmptyLine>}
       </Section>
 
-      <Accordion type="multiple" className="space-y-3">
+      <Accordion type="multiple" className="space-y-3" defaultValue={typeof window !== "undefined" && window.location.hash ? [window.location.hash.slice(1)] : []}>
         <Block value="audiences" title="Públicos" count={activeItems(view.audiences).length} aside={addBtn("brand_audiences", "Adicionar público")}>
           <div className="grid gap-3 md:grid-cols-2">{activeItems(view.audiences).map((a) => (
             <KnowledgeCard key={a.id} item={a} title={a.name} subtitle={AUDIENCE_TYPES[a.audience_type]} actions={actionsFor("brand_audiences", a as never, "público")} observation={supersededObservation(view.audiences, a)}>
@@ -439,7 +439,7 @@ const BrandProfile = () => {
 
 function Block({ value, title, count, aside, children }: { value: string; title: string; count?: number; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <AccordionItem value={value} className="rounded-xl border border-border bg-card/70 backdrop-blur-md px-5 sm:px-6">
+    <AccordionItem id={value} value={value} className="rounded-xl scroll-mt-4 border border-border bg-card/70 backdrop-blur-md px-5 sm:px-6">
       <AccordionTrigger className="hover:no-underline">
         <span className="flex items-center gap-2 text-base font-semibold">{title}{count !== undefined && <Pill>{count}</Pill>}</span>
       </AccordionTrigger>
