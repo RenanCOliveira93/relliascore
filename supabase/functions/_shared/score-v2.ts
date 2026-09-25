@@ -5,6 +5,8 @@
 // The Content Score measures content readiness. It is NOT a probability of being recommended/cited by any AI engine.
 import type { TechnicalSignals } from "./signals.ts";
 import { parseActionPlan, type ParseResult, type ParsedActionItem } from "./model-parse.ts";
+import { computeTechnicalGeoV2, type TechnicalGeoResult } from "./technical-geo.ts";
+import type { RobotsResult } from "./robots.ts";
 
 export const SCORE_VERSION = "2.0" as const;
 export type ScoreVersion = typeof SCORE_VERSION | "legacy";
@@ -82,28 +84,14 @@ export function computeContentScore(dims: Partial<Record<DimensionKey, number | 
   return { ok: true, value: { content_score: Math.round(clamp(sum, 0, 100) * 1000) / 1000, partial: used.length < DIMENSION_KEYS.length, weights_applied } };
 }
 
-// ---------- Technical GEO (deterministic) ----------
+// ---------- Technical GEO (deterministic, rules engine in technical-geo.ts) ----------
 export interface TechnicalCheck { id: string; label: string; points: number; max: number }
 
-export function computeTechnicalGeo(s: TechnicalSignals): { score: number; checks: TechnicalCheck[] } {
-  const checks: TechnicalCheck[] = [];
-  const add = (id: string, label: string, points: number, max: number) => checks.push({ id, label, points: r2(points), max });
-  const indexable = s.http_status >= 200 && s.http_status < 300 && !s.robots_noindex;
-  add("indexable", "HTTP 2xx e sem noindex", indexable ? 15 : 0, 15);
-  add("title", "Title presente (≤65 caracteres)", !s.has_title ? 0 : s.title_length <= 65 ? 10 : 6, 10);
-  add("meta_description", "Meta description presente", s.has_meta_description ? 10 : 0, 10);
-  add("h1", "Exatamente um H1", s.h1_count === 1 ? 10 : s.h1_count > 1 ? 5 : 0, 10);
-  add("subheadings", "Ao menos 2 subtítulos H2", s.h2_count >= 2 ? 5 : s.h2_count === 1 ? 2.5 : 0, 5);
-  add("canonical", "Canonical coerente", !s.has_canonical ? 0 : s.canonical_matches_url === false ? 2 : 8, 8);
-  add("lang", "Atributo lang", s.has_lang ? 5 : 0, 5);
-  add("structured_data", "JSON-LD válido", !s.has_structured_data ? 0 : s.json_ld_invalid_count > 0 ? 6 : 12, 12);
-  add("alt_text", "Cobertura de alt text", s.alt_text_coverage === null ? 5 : 5 * s.alt_text_coverage, 5);
-  add("open_graph", "OpenGraph", s.has_open_graph ? 5 : 0, 5);
-  add("author", "Autor identificado", s.has_author ? 5 : 0, 5);
-  add("dates", "Data de publicação/atualização", s.has_published_date || s.has_modified_date ? 5 : 0, 5);
-  add("content_length", "Conteúdo não raso (≥300 palavras)", s.thin_content ? 0 : 5, 5);
-  const score = r2(checks.reduce((a, c) => a + c.points, 0));
-  return { score: clamp(score, 0, 100), checks };
+/** Compatibility wrapper around Technical GEO 2.0 (ruleset v1). Only applicable, measured rules count. */
+export function computeTechnicalGeo(s: TechnicalSignals, opts: { robots?: RobotsResult | null } = {}): { score: number; checks: TechnicalCheck[]; result: TechnicalGeoResult } {
+  const result = computeTechnicalGeoV2(s, { robots: opts.robots ?? null });
+  const checks = result.rules.filter((r) => r.score !== null).map((r) => ({ id: r.id, label: r.label, points: r.score as number, max: r.max_points }));
+  return { score: result.score, checks, result };
 }
 
 // ---------- Entity clarity ----------
@@ -374,12 +362,16 @@ export interface V2Output {
   entity_signals: EntitySignal[];
   content_claims: ContentClaim[];
   technical_geo_checks: TechnicalCheck[] | null;
+  /** Full Technical GEO 2.0 audit; null for text input (N/D). */
+  technical_geo: TechnicalGeoResult | null;
+  /** Dimensions that entered the Content Score. */
+  dimensions_used: DimensionKey[];
   /** Legacy adapters (UI/PDF/API compatibility). */
   score: number;
   sub_scores: Record<"relevancia_tematica" | "qualidade_conteudo" | "autoridade_percebida" | "otimizacao_llm" | "clareza_proposta_valor", number>;
 }
 
-export function buildV2Scores(a: V2Assessment, s: TechnicalSignals | null): ParseResult<V2Output> {
+export function buildV2Scores(a: V2Assessment, s: TechnicalSignals | null, opts: { robots?: RobotsResult | null } = {}): ParseResult<V2Output> {
   const semantic: ScoreDimension = {
     available: true, score: r2(a.semantic_relevance.score), weight: DIMENSION_WEIGHTS.semantic_relevance, source: "llm",
     reason: a.semantic_relevance.reason, evidence: a.semantic_relevance.evidence, confidence: a.semantic_relevance.confidence,
@@ -389,13 +381,15 @@ export function buildV2Scores(a: V2Assessment, s: TechnicalSignals | null): Pars
   const cit = scoreCitationReadiness(a.citation_raw, a.citation_reason, s);
   let technical: ScoreDimension;
   let checks: TechnicalCheck[] | null = null;
+  let tgResult: TechnicalGeoResult | null = null;
   if (s) {
-    const tg = computeTechnicalGeo(s);
+    const tg = computeTechnicalGeo(s, { robots: opts.robots ?? null });
     checks = tg.checks;
+    tgResult = tg.result;
     technical = {
       available: true, score: tg.score, weight: DIMENSION_WEIGHTS.technical_geo, source: "deterministic",
-      reason: `Calculado a partir de ${tg.checks.length} verificações técnicas observadas na página.`,
-      evidence: tg.checks.map((c) => `${c.label}: ${c.points}/${c.max}`), confidence: 1,
+      reason: `Auditoria técnica v${tg.result.technical_geo_version}: ${tg.checks.length} regras aplicáveis medidas para página do tipo ${tg.result.page_type.page_type} (cobertura ${Math.round(tg.result.coverage * 100)}%).`,
+      evidence: tg.checks.map((c) => `${c.label}: ${c.points}/${c.max}`), confidence: tg.result.coverage,
     };
   } else {
     technical = {
@@ -421,6 +415,8 @@ export function buildV2Scores(a: V2Assessment, s: TechnicalSignals | null): Pars
       entity_signals: a.entity_signals,
       content_claims: a.content_claims,
       technical_geo_checks: checks,
+      technical_geo: tgResult,
+      dimensions_used: DIMENSION_KEYS.filter((k) => dims[k].available && dims[k].score !== null),
       score: Math.round(computed.value.content_score),
       // Adapter: legacy keys filled from v2 dimensions (technical unavailable → citation readiness).
       sub_scores: {
@@ -455,6 +451,25 @@ export function v2AnaliseColumns(data: Record<string, unknown>): Record<string, 
     evidence_readiness: data.evidence_readiness ?? null,
     citation_readiness: data.citation_readiness ?? null,
     technical_signals: data.technical_signals ?? null,
+    weights_applied: data.weights_applied ?? null,
+    ...technicalGeoColumns(obj(data.technical_geo)),
+  };
+}
+
+function technicalGeoColumns(tg: Record<string, unknown> | null): Record<string, unknown> {
+  if (!tg) return { technical_geo_version: null };
+  const pt = obj(tg.page_type);
+  return {
+    technical_geo_version: tg.technical_geo_version ?? null,
+    page_type: pt?.page_type ?? null,
+    page_type_confidence: isNum(pt?.confidence) ? pt!.confidence : null,
+    page_type_source: pt?.source ?? null,
+    technical_geo_coverage: isNum(tg.coverage) ? tg.coverage : null,
+    technical_geo_rules: tg.rules ?? null,
+    technical_geo_critical_issues: tg.critical_issues ?? null,
+    technical_geo_quick_wins: tg.quick_wins ?? null,
+    structured_data_recommendations: tg.structured_data_recommendations ?? null,
+    ai_crawler_access: tg.ai_crawler_access ?? null,
   };
 }
 
