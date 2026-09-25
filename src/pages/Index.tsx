@@ -22,7 +22,28 @@ import BrandAnalysisResults from "@/components/BrandAnalysisResults";
 import BrandAnalysisHistory from "@/components/BrandAnalysisHistory";
 import { generateAnalysisPdf } from "@/lib/generatePdf";
 import { supabase } from "@/integrations/supabase/client";
-import type { AnalysisResult, AnalysisMode, InputType } from "@/types/analysis";
+import type { AnalysisResult, AnalysisMode, InputType, AnalysisFailure } from "@/types/analysis";
+import { FunctionsHttpError } from "@supabase/supabase-js";
+import { AlertTriangle, RotateCcw } from "lucide-react";
+
+const FAILURE_TITLES: Record<AnalysisFailure["status"], string> = {
+  crawl_failed: "Não foi possível analisar a página",
+  invalid_url: "Endereço não permitido",
+  timeout: "A página demorou demais para responder",
+  unsupported_content: "O endereço não é uma página HTML",
+  analysis_failed: "A análise não pôde ser concluída",
+};
+
+async function readFunctionError(error: unknown): Promise<AnalysisFailure> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body?.status && body.status !== "success") return { status: body.status, error: body.error ?? "Erro na análise.", request_id: body.request_id };
+      return { status: "analysis_failed", error: body?.error ?? "Erro na análise.", request_id: body?.request_id };
+    } catch { /* fallthrough */ }
+  }
+  return { status: "analysis_failed", error: error instanceof Error ? error.message : "Erro na análise." };
+}
 import type { BrandAnalysisResult } from "@/types/brand-analysis";
 
 const Index = () => {
@@ -33,6 +54,7 @@ const Index = () => {
   const [inputType, setInputType] = useState<InputType>("webpage");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [failure, setFailure] = useState<AnalysisFailure | null>(null);
 
   // Brand analysis state
   const [isBrandAnalyzing, setIsBrandAnalyzing] = useState(false);
@@ -44,7 +66,7 @@ const Index = () => {
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { activeWorkspace } = useWorkspace();
-  const { planConfig, canAnalyze, remainingAnalyses, incrementUsage, subscription } = useSubscription();
+  const { planConfig, canAnalyze, remainingAnalyses, incrementUsage, subscription, refreshSubscription } = useSubscription();
 
   const handleAnalyze = async () => {
     if (!canAnalyze) {
@@ -71,14 +93,20 @@ const Index = () => {
       }
       setIsAnalyzing(true);
       setResult(null);
+      setFailure(null);
       try {
         const allowed = await incrementUsage();
         if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null }
         });
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
+        if (error) {
+          const f = await readFunctionError(error);
+          setFailure(f);
+          refreshSubscription();
+          return;
+        }
+        if (data?.status && data.status !== "success") { setFailure(data); refreshSubscription(); return; }
         setResult(data);
         toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu site." });
       } catch (error) {
@@ -94,14 +122,20 @@ const Index = () => {
       }
       setIsAnalyzing(true);
       setResult(null);
+      setFailure(null);
       try {
         const allowed = await incrementUsage();
         if (!allowed) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
           body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null }
         });
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
+        if (error) {
+          const f = await readFunctionError(error);
+          setFailure(f);
+          refreshSubscription();
+          return;
+        }
+        if (data?.status && data.status !== "success") { setFailure(data); refreshSubscription(); return; }
         setResult(data);
         toast({ title: "Análise concluída!", description: "Veja o diagnóstico completo do seu texto." });
       } catch (error) {
@@ -143,7 +177,7 @@ const Index = () => {
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
         body: { ...data, workspaceId: activeWorkspace?.id ?? null }
       });
-      if (error) throw error;
+      if (error) { const f = await readFunctionError(error); refreshSubscription(); throw new Error(f.error); }
       if (result.error) throw new Error(result.error);
       setBrandResult(result);
 
@@ -172,6 +206,7 @@ const Index = () => {
 
   const handleReset = () => {
     setResult(null);
+    setFailure(null);
     setWebsiteUrl("");
     setSearchQuery("");
     setTextContent("");
@@ -235,7 +270,29 @@ const Index = () => {
 
             {/* ========== RELEVANCE TAB ========== */}
             <TabsContent value="relevance">
-              {!isAnalyzing && !result && (
+              {failure && !isAnalyzing && (
+                <Card className="backdrop-blur-md bg-card/80 border-destructive/40">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="h-5 w-5" />
+                      {FAILURE_TITLES[failure.status] ?? FAILURE_TITLES.analysis_failed}
+                    </CardTitle>
+                    <CardDescription>{failure.error}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum score foi gerado, pois não houve conteúdo real para analisar. Esta tentativa não foi descontada do seu plano.
+                    </p>
+                    {failure.request_id && <p className="text-xs text-muted-foreground/70">Código de rastreio: {failure.request_id}</p>}
+                    <div className="flex gap-2">
+                      <Button onClick={handleAnalyze} className="gap-2"><RotateCcw className="h-4 w-4" />Tentar novamente</Button>
+                      <Button variant="outline" onClick={() => setFailure(null)}>Editar dados</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!isAnalyzing && !result && !failure && (
                 <div className="space-y-8">
                   <div className="text-center space-y-4 py-8">
                     <h2 className="text-4xl font-bold tracking-tight">

@@ -47,6 +47,9 @@ const ActionPlan = ({ actions }: ActionPlanProps) => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{item.action}</p>
                   <p className="text-xs text-muted-foreground mt-1">Impacto: {item.impact}</p>
+                  {item.evidence && (
+                    <p className="text-xs text-muted-foreground/80 mt-1 italic line-clamp-2">Evidência: {item.evidence}</p>
+                  )}
                   <div className="flex gap-2 mt-2">
                     <Badge variant="outline" className="text-xs">
                       {categoryLabels[item.category] || item.category}
@@ -54,6 +57,12 @@ const ActionPlan = ({ actions }: ActionPlanProps) => {
                     <Badge variant="outline" className={`text-xs ${config.className}`}>
                       Prioridade {config.label}
                     </Badge>
+                    {item.basis && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground" title={item.reason}>
+                        {item.basis === "signal" ? "Sinal técnico" : item.basis === "content" ? "Conteúdo" : "Inferência"}
+                        {typeof item.confidence === "number" && ` · ${Math.round(item.confidence * 100)}%`}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
