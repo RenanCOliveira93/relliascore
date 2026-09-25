@@ -34,11 +34,11 @@ export const Help = ({ text }: { text: string }) => (
   </TooltipProvider>
 );
 
-export const Section = ({ id, title, lead, children, aside }: { id?: string; title: string; lead?: string; children: ReactNode; aside?: ReactNode }) => (
+export const Section = ({ id, title, lead, children, aside }: { id?: string; title?: string; lead?: string; children: ReactNode; aside?: ReactNode }) => (
   <section id={id} className="rounded-xl border border-border bg-card/70 backdrop-blur-md p-5 sm:p-6 space-y-4">
     <header className="flex items-start justify-between gap-3">
       <div className="space-y-1">
-        <h3 className="text-base sm:text-lg font-semibold text-foreground">{title}</h3>
+        {title && <h3 className="text-base sm:text-lg font-semibold text-foreground">{title}</h3>}
         {lead && <p className="text-sm text-muted-foreground leading-relaxed">{lead}</p>}
       </div>
       {aside}

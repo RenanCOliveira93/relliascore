@@ -253,7 +253,7 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
         <AccordionItem value="tech" className="rounded-xl border border-border bg-card/70 px-5">
           <AccordionTrigger className="text-left">Technical GEO</AccordionTrigger>
           <AccordionContent>
-            {r.technical_geo ? <TechnicalGeoAudit audit={r.technical_geo} />
+            {r.technical_geo ? <TechnicalGeoAudit audit={r.technical_geo} hideTitle />
               : <p className="text-sm text-muted-foreground">N/D — Technical GEO não se aplica a textos pré-publicação.</p>}
           </AccordionContent>
         </AccordionItem>

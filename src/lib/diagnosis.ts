@@ -277,10 +277,14 @@ export function rowToResult(row: Record<string, any>): AnalysisResult {
   const base: AnalysisResult = {
     score: row.score ?? 0,
     summary: row.summary ?? "",
-    strengths: [],
-    improvements: [],
+    // Snapshot fields (absent on rows saved before they existed → shown as unavailable, never invented).
+    strengths: Array.isArray(row.strengths) ? row.strengths : [],
+    improvements: Array.isArray(row.improvements) ? row.improvements : [],
     sub_scores: row.sub_scores ?? null,
-    compatibility_diagnostic: null as any,
+    compatibility_diagnostic: (row.current_vs_ideal ?? null) as any,
+    ideal_example: typeof row.optimized_version === "string" && row.optimized_version ? row.optimized_version : undefined,
+    schema_version: row.schema_version ?? undefined,
+    analysis_id: row.id ?? undefined,
     action_plan: row.action_plan ?? [],
     keywords_analysis: row.keywords_analysis ?? null,
     technical_signals: row.technical_signals ?? null,

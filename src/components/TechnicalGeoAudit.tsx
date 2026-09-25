@@ -11,13 +11,13 @@ export const pageTypeLabel = (t?: string) => (t ? PAGE_TYPE[t] ?? t : "—");
 
 const verdictTone = (v: string): Tone => (v === "allowed" ? "positive" : v === "blocked" ? "attention" : "neutral");
 
-const TechnicalGeoAudit = ({ audit }: { audit: Audit }) => {
+const TechnicalGeoAudit = ({ audit, hideTitle = false }: { audit: Audit; hideTitle?: boolean }) => {
   const groups = groupRules(audit.rules);
   const crawlers = audit.ai_crawler_access ? crawlerGroups(audit) : null;
   return (
     <Section
       id="technical-geo"
-      title="Technical GEO"
+      title={hideTitle ? undefined : "Technical GEO"}
       lead="Estrutura técnica verificada diretamente na página, com regras determinísticas."
       aside={<span className={`text-3xl font-bold tabular-nums ${TONE_TEXT[toneOf(audit.score)]}`}>{Math.round(audit.score)}</span>}
     >
