@@ -10,7 +10,7 @@ export type ItemOrigin = "extraction" | "user_edit";
 export interface BrandSourceStatus { source: "website" | "linkedin" | "instagram" | "user_description"; status: BrandSourceStatusValue; url?: string; reason?: string; content_truncated?: boolean }
 export interface BrandSource { source_type: BrandSourceType; source_url: string | null; evidence: string | null; confidence: number; explicit_or_inferred: ExplicitOrInferred; observed_at: string }
 
-interface Item extends BrandSource { id: string; brand_brain_id: string; sources: BrandSource[]; origin: ItemOrigin; carried_from_id: string | null; created_at: string; updated_at: string }
+interface Item extends BrandSource { id: string; brand_brain_id: string; sources: BrandSource[]; origin: ItemOrigin; carried_from_id: string | null; supersedes_id: string | null; human_status: "none" | "confirmed" | "rejected"; reviewed_by: string | null; reviewed_at: string | null; created_at: string; updated_at: string }
 
 export interface BrandOffering extends Item { name: string; type: "product" | "service" | "platform" | "solution" | "other"; description: string | null; category: string | null; target_audience: string | null; problems_solved: string[]; value_proposition: string | null }
 export interface BrandAudience extends Item { name: string; description: string | null; audience_type: "company" | "professional" | "consumer" | "creator" | "institution" | "other"; needs: string[]; problems: string[]; industries: string[]; roles: string[] }
@@ -51,4 +51,39 @@ export interface BrandBrainResult {
   persisted: boolean; reason?: "no_empresa" | "no_structured_knowledge" | "persist_failed";
   brand_brain_id?: string; version?: number; empresa_id?: string; extraction_confidence?: number | null;
   sources_status: BrandSourceStatus[]; dropped_items: number;
+}
+
+// ---------- 03B Brand Profile ----------
+export type HumanStatus = "none" | "confirmed" | "rejected";
+/** How a piece of knowledge is presented. user_edit/human_confirmed are human; confirmation is NOT external evidence. */
+export type BrandKnowledgeStatus = "observed" | "declared" | "inferred" | "user_edit" | "human_confirmed" | "rejected";
+
+export interface HumanConfirmation { status: Exclude<HumanStatus, "none">; reviewed_by: string; reviewed_at: string }
+
+export type OverrideField = "company_name" | "short_description" | "long_description" | "primary_category" | "business_model" | "value_proposition" | "mission" | "target_summary" | "tone_summary" | "visual_summary" | "positioning" | "secondary_categories" | "geographic_markets" | "languages";
+export interface BrandFieldOverride {
+  id: string; brand_brain_id: string; field: OverrideField; status: "user_edit" | "confirmed";
+  value: string | string[] | null; observed_value: string | string[] | null; user_id: string; created_at: string; updated_at: string;
+}
+
+export interface ClaimEvidenceRelationship {
+  id: string; brand_brain_id: string; claim_id: string; evidence_id: string;
+  relationship_type: "supports" | "partially_supports" | "contradicts" | "related"; origin: ItemOrigin; created_by: string | null; created_at: string;
+}
+
+export interface BrandAuditEvent {
+  id: string; workspace_id: string; empresa_id: string; brand_brain_id: string | null; user_id: string;
+  action: string; target_table: string | null; target_id: string | null; field: string | null;
+  old_value: unknown; new_value: unknown; request_id: string | null; created_at: string;
+}
+
+export interface BrandBrainCompleteness { filled: number; total: number; label: string; areas: { key: string; label: string; filled: boolean }[] }
+
+/** Everything the Brand Profile screen shows for one version (active or historical, read-only). */
+export interface BrandProfileView {
+  brain: BrandBrainVersion; readOnly: boolean;
+  overrides: BrandFieldOverride[]; links: ClaimEvidenceRelationship[];
+  offerings: BrandOffering[]; audiences: BrandAudience[]; problems: BrandProblem[]; differentiators: BrandDifferentiator[];
+  claims: BrandClaim[]; evidence: BrandEvidence[]; entities: BrandEntity[]; positioning_items: BrandPositioning[];
+  voice: BrandVoice[]; visual_identity: BrandVisualIdentity[];
 }
