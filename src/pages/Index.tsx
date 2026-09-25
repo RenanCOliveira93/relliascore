@@ -422,8 +422,8 @@ const Index = () => {
                     </div>
                   </div>
 
-                  {/* Pinned: input that generated this analysis */}
-                  <Card className="border-primary/30 bg-primary/5 backdrop-blur-md">
+                  {/* Pinned: input that generated this analysis (2.0 shows it in the diagnosis header) */}
+                  {result.score_version !== "2.0" && <Card className="border-primary/30 bg-primary/5 backdrop-blur-md">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm flex items-center gap-2 text-primary">
                         <Search className="h-4 w-4" />
@@ -447,7 +447,7 @@ const Index = () => {
                         <p className="text-foreground/90 mt-0.5 italic whitespace-pre-wrap">"{searchQuery}"</p>
                       </div>
                     </CardContent>
-                  </Card>
+                  </Card>}
 
                   <ScoreDisplay result={result} context={{ source: websiteUrl, query: searchQuery, inputType }} />
                 </div>

@@ -101,7 +101,7 @@ const LegacyScoreDisplay = ({ result }: { result: AnalysisResult }) => {
         </TabsList>
 
         <TabsContent value="scores">
-          {result.sub_scores && result.compatibility_diagnostic !== undefined && <SubScoresRadar subScores={result.sub_scores} dimensions={result.score_dimensions} />}
+          {result.sub_scores && <SubScoresRadar subScores={result.sub_scores} dimensions={result.score_dimensions} />}
           {result.score_version === "2.0" && result.content_score_partial && (
             <p className="text-xs text-muted-foreground mt-3">Score parcial: Technical GEO não se aplica a texto pré-publicação (N/D). Os pesos das outras quatro dimensões foram redistribuídos; não compare diretamente com análises de URL.</p>
           )}
