@@ -387,7 +387,7 @@ const BrandProfile = () => {
         {derived.rejected > 0 && (
           <Block value="rejected" title="Itens rejeitados" count={derived.rejected}>
             <p className="text-xs text-muted-foreground">Continuam guardados para histórico e não são usados como conhecimento. Se reaparecerem numa nova análise, continuam rejeitados.</p>
-            <div className="grid gap-3 md:grid-cols-2">{TABLES.flatMap((t, i) => rejectedItems([view.offerings, view.audiences, view.problems, view.differentiators, view.claims, view.evidence, view.entities, view.positioning_items, view.voice, view.visual_identity][i] as (RankedItem & Record<string, unknown>)[]).map((r) => (
+            <div className="grid gap-3 md:grid-cols-2">{TABLES.flatMap((t, i) => rejectedItems([view.offerings, view.audiences, view.problems, view.differentiators, view.claims, view.evidence, view.entities, view.positioning_items, view.voice, view.visual_identity][i] as unknown as (RankedItem & Record<string, unknown>)[]).map((r) => (
               <KnowledgeCard key={r.id} item={r} title={String(r.name ?? r.statement ?? r.title ?? "Item")} actions={actionsFor(t, r, "item")} />
             )))}</div>
           </Block>
