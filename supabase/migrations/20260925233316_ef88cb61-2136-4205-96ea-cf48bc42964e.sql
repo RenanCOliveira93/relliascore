@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.trg_bb_problem_link() FROM PUBLIC, anon, authenticated;
