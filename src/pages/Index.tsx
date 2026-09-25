@@ -191,6 +191,7 @@ const Index = () => {
           description: data.description,
           result: result as any,
           workspace_id: activeWorkspace?.id ?? null,
+          brand_brain_id: result?.brand_brain?.persisted ? result.brand_brain.brand_brain_id : null,
         });
         setBrandHistoryKey((k) => k + 1);
       }

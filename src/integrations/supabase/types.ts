@@ -245,6 +245,7 @@ export type Database = {
       }
       brand_analyses: {
         Row: {
+          brand_brain_id: string | null
           created_at: string
           description: string
           id: string
@@ -257,6 +258,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          brand_brain_id?: string | null
           created_at?: string
           description: string
           id?: string
@@ -269,6 +271,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          brand_brain_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -282,10 +285,862 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "brand_analyses_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "brand_analyses_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_audiences: {
+        Row: {
+          audience_type: string
+          brand_brain_id: string
+          carried_from_id: string | null
+          confidence: number
+          created_at: string
+          description: string | null
+          evidence: string | null
+          explicit_or_inferred: string
+          id: string
+          industries: string[]
+          name: string
+          needs: string[]
+          observed_at: string
+          origin: string
+          problems: string[]
+          roles: string[]
+          source_type: string
+          source_url: string | null
+          sources: Json
+          updated_at: string
+        }
+        Insert: {
+          audience_type: string
+          brand_brain_id: string
+          carried_from_id?: string | null
+          confidence: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          explicit_or_inferred: string
+          id?: string
+          industries?: string[]
+          name: string
+          needs?: string[]
+          observed_at?: string
+          origin?: string
+          problems?: string[]
+          roles?: string[]
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+        }
+        Update: {
+          audience_type?: string
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          explicit_or_inferred?: string
+          id?: string
+          industries?: string[]
+          name?: string
+          needs?: string[]
+          observed_at?: string
+          origin?: string
+          problems?: string[]
+          roles?: string[]
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_audiences_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_brains: {
+        Row: {
+          business_model: string | null
+          company_name: string | null
+          created_at: string
+          empresa_id: string
+          extraction_confidence: number | null
+          field_provenance: Json
+          geographic_markets: string[]
+          id: string
+          is_active: boolean
+          languages: string[]
+          last_analyzed_at: string
+          long_description: string | null
+          mission: string | null
+          model_version: string
+          positioning: string | null
+          positioning_conflicts: Json
+          primary_category: string | null
+          primary_domain: string | null
+          request_id: string | null
+          secondary_categories: string[]
+          short_description: string | null
+          sources_status: Json
+          status: string
+          suggested_pages: Json
+          target_summary: string | null
+          tone_summary: string | null
+          updated_at: string
+          user_id: string
+          value_proposition: string | null
+          version: number
+          visual_summary: string | null
+          workspace_id: string
+        }
+        Insert: {
+          business_model?: string | null
+          company_name?: string | null
+          created_at?: string
+          empresa_id: string
+          extraction_confidence?: number | null
+          field_provenance?: Json
+          geographic_markets?: string[]
+          id?: string
+          is_active?: boolean
+          languages?: string[]
+          last_analyzed_at?: string
+          long_description?: string | null
+          mission?: string | null
+          model_version?: string
+          positioning?: string | null
+          positioning_conflicts?: Json
+          primary_category?: string | null
+          primary_domain?: string | null
+          request_id?: string | null
+          secondary_categories?: string[]
+          short_description?: string | null
+          sources_status?: Json
+          status?: string
+          suggested_pages?: Json
+          target_summary?: string | null
+          tone_summary?: string | null
+          updated_at?: string
+          user_id: string
+          value_proposition?: string | null
+          version: number
+          visual_summary?: string | null
+          workspace_id: string
+        }
+        Update: {
+          business_model?: string | null
+          company_name?: string | null
+          created_at?: string
+          empresa_id?: string
+          extraction_confidence?: number | null
+          field_provenance?: Json
+          geographic_markets?: string[]
+          id?: string
+          is_active?: boolean
+          languages?: string[]
+          last_analyzed_at?: string
+          long_description?: string | null
+          mission?: string | null
+          model_version?: string
+          positioning?: string | null
+          positioning_conflicts?: Json
+          primary_category?: string | null
+          primary_domain?: string | null
+          request_id?: string | null
+          secondary_categories?: string[]
+          short_description?: string | null
+          sources_status?: Json
+          status?: string
+          suggested_pages?: Json
+          target_summary?: string | null
+          tone_summary?: string | null
+          updated_at?: string
+          user_id?: string
+          value_proposition?: string | null
+          version?: number
+          visual_summary?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_brains_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_brains_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_claims: {
+        Row: {
+          brand_brain_id: string
+          carried_from_id: string | null
+          claim_type: string
+          confidence: number
+          created_at: string
+          evidence: string | null
+          evidence_refs: string[]
+          explicit_or_inferred: string
+          id: string
+          observed_at: string
+          origin: string
+          source_type: string
+          source_url: string | null
+          sources: Json
+          statement: string
+          updated_at: string
+          verification_status: string
+        }
+        Insert: {
+          brand_brain_id: string
+          carried_from_id?: string | null
+          claim_type: string
+          confidence: number
+          created_at?: string
+          evidence?: string | null
+          evidence_refs?: string[]
+          explicit_or_inferred: string
+          id?: string
+          observed_at?: string
+          origin?: string
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          statement: string
+          updated_at?: string
+          verification_status: string
+        }
+        Update: {
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          claim_type?: string
+          confidence?: number
+          created_at?: string
+          evidence?: string | null
+          evidence_refs?: string[]
+          explicit_or_inferred?: string
+          id?: string
+          observed_at?: string
+          origin?: string
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          statement?: string
+          updated_at?: string
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_claims_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_differentiators: {
+        Row: {
+          brand_brain_id: string
+          carried_from_id: string | null
+          category: string
+          confidence: number
+          created_at: string
+          evidence: string | null
+          explicit_or_inferred: string
+          id: string
+          observed_at: string
+          origin: string
+          source_type: string
+          source_url: string | null
+          sources: Json
+          statement: string
+          updated_at: string
+        }
+        Insert: {
+          brand_brain_id: string
+          carried_from_id?: string | null
+          category: string
+          confidence: number
+          created_at?: string
+          evidence?: string | null
+          explicit_or_inferred: string
+          id?: string
+          observed_at?: string
+          origin?: string
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          statement: string
+          updated_at?: string
+        }
+        Update: {
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          category?: string
+          confidence?: number
+          created_at?: string
+          evidence?: string | null
+          explicit_or_inferred?: string
+          id?: string
+          observed_at?: string
+          origin?: string
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          statement?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_differentiators_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_entities: {
+        Row: {
+          brand_brain_id: string
+          carried_from_id: string | null
+          confidence: number
+          created_at: string
+          description: string | null
+          entity_type: string
+          evidence: string | null
+          explicit_or_inferred: string
+          id: string
+          name: string
+          observed_at: string
+          origin: string
+          relationship: string | null
+          source_type: string
+          source_url: string | null
+          sources: Json
+          updated_at: string
+        }
+        Insert: {
+          brand_brain_id: string
+          carried_from_id?: string | null
+          confidence: number
+          created_at?: string
+          description?: string | null
+          entity_type: string
+          evidence?: string | null
+          explicit_or_inferred: string
+          id?: string
+          name: string
+          observed_at?: string
+          origin?: string
+          relationship?: string | null
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+        }
+        Update: {
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          entity_type?: string
+          evidence?: string | null
+          explicit_or_inferred?: string
+          id?: string
+          name?: string
+          observed_at?: string
+          origin?: string
+          relationship?: string | null
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_entities_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_evidence: {
+        Row: {
+          brand_brain_id: string
+          carried_from_id: string | null
+          confidence: number
+          created_at: string
+          description: string | null
+          evidence: string | null
+          evidence_type: string
+          explicit_or_inferred: string
+          id: string
+          observed_at: string
+          origin: string
+          source_type: string
+          source_url: string | null
+          sources: Json
+          title: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          brand_brain_id: string
+          carried_from_id?: string | null
+          confidence: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          evidence_type: string
+          explicit_or_inferred: string
+          id?: string
+          observed_at?: string
+          origin?: string
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          title: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          evidence_type?: string
+          explicit_or_inferred?: string
+          id?: string
+          observed_at?: string
+          origin?: string
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          title?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_evidence_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_offerings: {
+        Row: {
+          brand_brain_id: string
+          carried_from_id: string | null
+          category: string | null
+          confidence: number
+          created_at: string
+          description: string | null
+          evidence: string | null
+          explicit_or_inferred: string
+          id: string
+          name: string
+          observed_at: string
+          origin: string
+          problems_solved: string[]
+          source_type: string
+          source_url: string | null
+          sources: Json
+          target_audience: string | null
+          type: string
+          updated_at: string
+          value_proposition: string | null
+        }
+        Insert: {
+          brand_brain_id: string
+          carried_from_id?: string | null
+          category?: string | null
+          confidence: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          explicit_or_inferred: string
+          id?: string
+          name: string
+          observed_at?: string
+          origin?: string
+          problems_solved?: string[]
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          target_audience?: string | null
+          type: string
+          updated_at?: string
+          value_proposition?: string | null
+        }
+        Update: {
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          category?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          explicit_or_inferred?: string
+          id?: string
+          name?: string
+          observed_at?: string
+          origin?: string
+          problems_solved?: string[]
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          target_audience?: string | null
+          type?: string
+          updated_at?: string
+          value_proposition?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_offerings_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_positioning: {
+        Row: {
+          alternative_categories: string[]
+          brand_brain_id: string
+          carried_from_id: string | null
+          confidence: number
+          created_at: string
+          differentiators: string[]
+          evidence: string | null
+          explicit_or_inferred: string
+          id: string
+          kind: string
+          observed_at: string
+          origin: string
+          primary_category: string | null
+          source_type: string
+          source_url: string | null
+          sources: Json
+          statement: string | null
+          target_market: string | null
+          updated_at: string
+          value_proposition: string | null
+        }
+        Insert: {
+          alternative_categories?: string[]
+          brand_brain_id: string
+          carried_from_id?: string | null
+          confidence: number
+          created_at?: string
+          differentiators?: string[]
+          evidence?: string | null
+          explicit_or_inferred: string
+          id?: string
+          kind: string
+          observed_at?: string
+          origin?: string
+          primary_category?: string | null
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          statement?: string | null
+          target_market?: string | null
+          updated_at?: string
+          value_proposition?: string | null
+        }
+        Update: {
+          alternative_categories?: string[]
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          confidence?: number
+          created_at?: string
+          differentiators?: string[]
+          evidence?: string | null
+          explicit_or_inferred?: string
+          id?: string
+          kind?: string
+          observed_at?: string
+          origin?: string
+          primary_category?: string | null
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          statement?: string | null
+          target_market?: string | null
+          updated_at?: string
+          value_proposition?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_positioning_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_problems: {
+        Row: {
+          affected_audience: string[]
+          brand_brain_id: string
+          carried_from_id: string | null
+          confidence: number
+          created_at: string
+          description: string | null
+          evidence: string | null
+          explicit_or_inferred: string
+          id: string
+          name: string
+          observed_at: string
+          origin: string
+          related_offerings: string[]
+          source_type: string
+          source_url: string | null
+          sources: Json
+          updated_at: string
+        }
+        Insert: {
+          affected_audience?: string[]
+          brand_brain_id: string
+          carried_from_id?: string | null
+          confidence: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          explicit_or_inferred: string
+          id?: string
+          name: string
+          observed_at?: string
+          origin?: string
+          related_offerings?: string[]
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+        }
+        Update: {
+          affected_audience?: string[]
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          evidence?: string | null
+          explicit_or_inferred?: string
+          id?: string
+          name?: string
+          observed_at?: string
+          origin?: string
+          related_offerings?: string[]
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_problems_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_visual_identity: {
+        Row: {
+          accent_colors: Json
+          brand_brain_id: string
+          carried_from_id: string | null
+          confidence: number
+          consistency_notes: string | null
+          created_at: string
+          detected_fonts: string[]
+          evidence: string | null
+          explicit_or_inferred: string
+          id: string
+          imagery_style: string | null
+          logo_url: string | null
+          observed_at: string
+          origin: string
+          primary_colors: Json
+          secondary_colors: Json
+          source_type: string
+          source_url: string | null
+          sources: Json
+          updated_at: string
+          visual_style: string | null
+        }
+        Insert: {
+          accent_colors?: Json
+          brand_brain_id: string
+          carried_from_id?: string | null
+          confidence: number
+          consistency_notes?: string | null
+          created_at?: string
+          detected_fonts?: string[]
+          evidence?: string | null
+          explicit_or_inferred: string
+          id?: string
+          imagery_style?: string | null
+          logo_url?: string | null
+          observed_at?: string
+          origin?: string
+          primary_colors?: Json
+          secondary_colors?: Json
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+          visual_style?: string | null
+        }
+        Update: {
+          accent_colors?: Json
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          confidence?: number
+          consistency_notes?: string | null
+          created_at?: string
+          detected_fonts?: string[]
+          evidence?: string | null
+          explicit_or_inferred?: string
+          id?: string
+          imagery_style?: string | null
+          logo_url?: string | null
+          observed_at?: string
+          origin?: string
+          primary_colors?: Json
+          secondary_colors?: Json
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          updated_at?: string
+          visual_style?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_visual_identity_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_voice: {
+        Row: {
+          brand_brain_id: string
+          carried_from_id: string | null
+          communication_style: string | null
+          complexity_level: string | null
+          confidence: number
+          created_at: string
+          emotional_style: string | null
+          evidence: string | null
+          explicit_or_inferred: string
+          formality: string | null
+          id: string
+          observed_at: string
+          origin: string
+          recurring_phrases: string[]
+          source_type: string
+          source_url: string | null
+          sources: Json
+          tone_traits: string[]
+          updated_at: string
+          vocabulary_avoided: string[]
+          vocabulary_preferred: string[]
+        }
+        Insert: {
+          brand_brain_id: string
+          carried_from_id?: string | null
+          communication_style?: string | null
+          complexity_level?: string | null
+          confidence: number
+          created_at?: string
+          emotional_style?: string | null
+          evidence?: string | null
+          explicit_or_inferred: string
+          formality?: string | null
+          id?: string
+          observed_at?: string
+          origin?: string
+          recurring_phrases?: string[]
+          source_type: string
+          source_url?: string | null
+          sources?: Json
+          tone_traits?: string[]
+          updated_at?: string
+          vocabulary_avoided?: string[]
+          vocabulary_preferred?: string[]
+        }
+        Update: {
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          communication_style?: string | null
+          complexity_level?: string | null
+          confidence?: number
+          created_at?: string
+          emotional_style?: string | null
+          evidence?: string | null
+          explicit_or_inferred?: string
+          formality?: string | null
+          id?: string
+          observed_at?: string
+          origin?: string
+          recurring_phrases?: string[]
+          source_type?: string
+          source_url?: string | null
+          sources?: Json
+          tone_traits?: string[]
+          updated_at?: string
+          vocabulary_avoided?: string[]
+          vocabulary_preferred?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_voice_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
             referencedColumns: ["id"]
           },
         ]
@@ -784,6 +1639,19 @@ export type Database = {
       increment_analysis_usage: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      persist_brand_brain: {
+        Args: {
+          p_empresa_id: string
+          p_payload: Json
+          p_request_id: string
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          brand_brain_id: string
+          version: number
+        }[]
       }
       record_webhook_delivery: {
         Args: { p_error?: string; p_success: boolean; p_webhook_id: string }
