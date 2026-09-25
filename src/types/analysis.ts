@@ -1,3 +1,4 @@
+import type { BrandAwareFields } from "./brand-alignment";
 export type AnalysisMode = "influencer" | "business";
 export type InputType = "webpage" | "text";
 
@@ -88,7 +89,7 @@ export interface KeywordsAnalysis {
   suggested: string[];
 }
 
-export interface AnalysisResult extends ContentScoreV2Fields {
+export interface AnalysisResult extends ContentScoreV2Fields, BrandAwareFields {
   score: number;
   summary: string;
   strengths: string[];

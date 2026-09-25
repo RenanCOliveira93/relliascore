@@ -322,6 +322,7 @@ export function rowToResult(row: Record<string, any>): AnalysisResult {
     evidence_readiness: row.evidence_readiness ?? undefined,
     citation_readiness: row.citation_readiness ?? undefined,
     technical_geo: tg,
+    ...brandFieldsFromRow(row),
   };
 }
 
