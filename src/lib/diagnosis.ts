@@ -1,3 +1,4 @@
+import { brandFieldsFromRow } from "./brand-alignment-view";
 // Pure presentation helpers for the RELLIA Content Score 2.0 diagnosis.
 // They only read persisted/returned analysis data — they never change the score math.
 import {
@@ -322,6 +323,7 @@ export function rowToResult(row: Record<string, any>): AnalysisResult {
     evidence_readiness: row.evidence_readiness ?? undefined,
     citation_readiness: row.citation_readiness ?? undefined,
     technical_geo: tg,
+    ...brandFieldsFromRow(row),
   };
 }
 

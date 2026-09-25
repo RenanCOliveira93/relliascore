@@ -243,11 +243,11 @@ const BrandProfile = () => {
         </div>
       </section>
 
-      <Section title="Visão geral da marca">
+      <Section id="overview" title="Visão geral da marca">
         <div>{SUMMARY_FIELDS.map(summaryRow)}</div>
       </Section>
 
-      <Section title="Posicionamento" aside={addBtn("brand_positioning", "Definir como a marca se define")}>
+      <Section id="positioning" title="Posicionamento" aside={addBtn("brand_positioning", "Definir como a marca se define")}>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Como a marca se define</h3>
@@ -271,12 +271,12 @@ const BrandProfile = () => {
         {derived.pos.message && <p data-testid="positioning-verdict" className={`text-sm ${derived.pos.verdict === "consistent" ? "text-success" : "text-warning"}`}>{derived.pos.message}</p>}
       </Section>
 
-      <Section title="Produtos & Serviços" aside={addBtn("brand_offerings", "Adicionar produto/serviço")}>
+      <Section id="offerings" title="Produtos & Serviços" aside={addBtn("brand_offerings", "Adicionar produto/serviço")}>
         <div className="grid gap-3 md:grid-cols-2">{offeringCards}</div>
         {!offeringCards.length && <EmptyLine>Nenhum produto ou serviço identificado.</EmptyLine>}
       </Section>
 
-      <Accordion type="multiple" className="space-y-3">
+      <Accordion type="multiple" className="space-y-3" defaultValue={typeof window !== "undefined" && window.location.hash ? [window.location.hash.slice(1)] : []}>
         <Block value="audiences" title="Públicos" count={activeItems(view.audiences).length} aside={addBtn("brand_audiences", "Adicionar público")}>
           <div className="grid gap-3 md:grid-cols-2">{activeItems(view.audiences).map((a) => (
             <KnowledgeCard key={a.id} item={a} title={a.name} subtitle={AUDIENCE_TYPES[a.audience_type]} actions={actionsFor("brand_audiences", a as never, "público")} observation={supersededObservation(view.audiences, a)}>
@@ -439,7 +439,7 @@ const BrandProfile = () => {
 
 function Block({ value, title, count, aside, children }: { value: string; title: string; count?: number; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <AccordionItem value={value} className="rounded-xl border border-border bg-card/70 backdrop-blur-md px-5 sm:px-6">
+    <AccordionItem id={value} value={value} className="rounded-xl scroll-mt-4 border border-border bg-card/70 backdrop-blur-md px-5 sm:px-6">
       <AccordionTrigger className="hover:no-underline">
         <span className="flex items-center gap-2 text-base font-semibold">{title}{count !== undefined && <Pill>{count}</Pill>}</span>
       </AccordionTrigger>

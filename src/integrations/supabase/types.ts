@@ -19,6 +19,20 @@ export type Database = {
           action_plan: Json | null
           ai_crawler_access: Json | null
           analysis_mode: string | null
+          brand_alignment_dimensions: Json | null
+          brand_alignment_findings: Json | null
+          brand_alignment_partial: boolean | null
+          brand_alignment_score: number | null
+          brand_alignment_version: string | null
+          brand_alignment_weights_applied: Json | null
+          brand_brain_id: string | null
+          brand_brain_version: number | null
+          brand_context_snapshot: Json | null
+          brand_entity_consistency: Json | null
+          brand_gaps: Json | null
+          brand_optimized_version: string | null
+          brand_recommendations: Json | null
+          brand_strengths: Json | null
           citation_readiness: Json | null
           content_claims: Json | null
           content_score: number | null
@@ -70,6 +84,20 @@ export type Database = {
           action_plan?: Json | null
           ai_crawler_access?: Json | null
           analysis_mode?: string | null
+          brand_alignment_dimensions?: Json | null
+          brand_alignment_findings?: Json | null
+          brand_alignment_partial?: boolean | null
+          brand_alignment_score?: number | null
+          brand_alignment_version?: string | null
+          brand_alignment_weights_applied?: Json | null
+          brand_brain_id?: string | null
+          brand_brain_version?: number | null
+          brand_context_snapshot?: Json | null
+          brand_entity_consistency?: Json | null
+          brand_gaps?: Json | null
+          brand_optimized_version?: string | null
+          brand_recommendations?: Json | null
+          brand_strengths?: Json | null
           citation_readiness?: Json | null
           content_claims?: Json | null
           content_score?: number | null
@@ -121,6 +149,20 @@ export type Database = {
           action_plan?: Json | null
           ai_crawler_access?: Json | null
           analysis_mode?: string | null
+          brand_alignment_dimensions?: Json | null
+          brand_alignment_findings?: Json | null
+          brand_alignment_partial?: boolean | null
+          brand_alignment_score?: number | null
+          brand_alignment_version?: string | null
+          brand_alignment_weights_applied?: Json | null
+          brand_brain_id?: string | null
+          brand_brain_version?: number | null
+          brand_context_snapshot?: Json | null
+          brand_entity_consistency?: Json | null
+          brand_gaps?: Json | null
+          brand_optimized_version?: string | null
+          brand_recommendations?: Json | null
+          brand_strengths?: Json | null
           citation_readiness?: Json | null
           content_claims?: Json | null
           content_score?: number | null
@@ -169,6 +211,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "analises_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "analises_empresa_id_fkey"
             columns: ["empresa_id"]
@@ -1173,6 +1222,58 @@ export type Database = {
           },
         ]
       }
+      brand_problem_offerings: {
+        Row: {
+          brand_brain_id: string
+          created_at: string
+          id: string
+          offering_id: string
+          origin: string
+          problem_id: string
+          relationship_type: string
+        }
+        Insert: {
+          brand_brain_id: string
+          created_at?: string
+          id?: string
+          offering_id: string
+          origin?: string
+          problem_id: string
+          relationship_type?: string
+        }
+        Update: {
+          brand_brain_id?: string
+          created_at?: string
+          id?: string
+          offering_id?: string
+          origin?: string
+          problem_id?: string
+          relationship_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_problem_offerings_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_problem_offerings_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "brand_offerings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_problem_offerings_problem_id_fkey"
+            columns: ["problem_id"]
+            isOneToOne: false
+            referencedRelation: "brand_problems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_problems: {
         Row: {
           affected_audience: string[]
@@ -1920,6 +2021,10 @@ export type Database = {
     }
     Functions: {
       bb_item_key: { Args: { p_table: string; r: Json }; Returns: string }
+      bb_link_problem_offerings: {
+        Args: { p_brain: string; p_origin?: string; p_problem?: string }
+        Returns: undefined
+      }
       bb_norm: { Args: { p: string }; Returns: string }
       check_rate_limit: {
         Args: {
