@@ -8,6 +8,8 @@ import { computeTechnicalSignals, hasEnoughContent, type TechnicalSignals } from
 import { budgetBlocks, budgetPlainText, metadataSection, type ContentPayload } from "../_shared/content-budget.ts";
 import { extractToolArguments } from "../_shared/model-parse.ts";
 import { buildV2Scores, buildV2ToolSchema, validateV2Assessment } from "../_shared/score-v2.ts";
+import { buildBrandContext, loadActiveBrandBrain, renderBrandContext, type BrandBrainData } from "../_shared/brand-context.ts";
+import { BRAND_SYSTEM_RULES, BRAND_TOOL_SCHEMA, brandWebhookFields, validateBrandAssessment } from "../_shared/brand-alignment.ts";
 import {
   adminClient, authenticate, checkRateLimits, clientIp, createLogger, jsonResponse, privateCors, refundUsage, verifyWorkspace,
 } from "../_shared/http.ts";
@@ -86,6 +88,20 @@ serve(async (req) => {
   }
   if (inputType === "webpage" && (typeof websiteUrl !== "string" || !websiteUrl.trim())) {
     return respond(400, { error: "URL do site é obrigatória para análise de webpage" });
+  }
+
+  // Brand-aware mode (03C): user → workspace → empresa → ACTIVE Brand Brain, resolved here (never trusting browser ids/versions).
+  const requestedEmpresa = body?.empresaId ?? null;
+  let brandEmpresaId: string | null = null;
+  let brandData: BrandBrainData | null = null;
+  let brandContextStatus: "none" | "no_brand_brain" | "ok" | "failed" = "none";
+  if (requestedEmpresa !== null && requestedEmpresa !== undefined && requestedEmpresa !== "") {
+    if (!userId || !workspaceId) return respond(403, { error: "Empresa não encontrada ou sem permissão." });
+    const loaded = await loadActiveBrandBrain(admin, userId, workspaceId, requestedEmpresa);
+    if (loaded.status === "forbidden") { log("brand_context_forbidden"); return respond(403, { error: "Empresa não encontrada ou sem permissão." }); }
+    brandEmpresaId = loaded.empresa_id;
+    if (loaded.status === "ok") { brandData = loaded.data; brandContextStatus = "ok"; } else brandContextStatus = "no_brand_brain";
+    log("brand_context_resolved", { empresa_id: brandEmpresaId, brand_aware: !!brandData, brand_brain_id: brandData?.brain.id ?? null, brand_brain_version: brandData?.brain.version ?? null });
   }
 
   // Plan quota is consumed server-side from the authenticated identity (never a client-sent user id).
@@ -221,6 +237,36 @@ Faça a análise completa usando a função fornecida.`;
     ideal_example: a.ideal_example,
   };
 
+  // ---- Brand Alignment (independent 2nd pass; the Content Score above is untouched) ----
+  let brand: Record<string, unknown> = {};
+  if (brandData) {
+    const ctx = buildBrandContext(brandData, searchQuery, payload.text);
+    log("brand_context_built", { brand_brain_id: ctx.brand_brain_id, brand_brain_version: ctx.brand_brain_version, items_included: ctx.selection.included.length, items_excluded: ctx.selection.excluded.length, context_truncated: ctx.selection.truncated });
+    try {
+      const bSystem = `${BRAND_SYSTEM_RULES}\n${modeContext}\n${inputType === "text" ? "O conteúdo é um texto pré-publicação: a versão otimizada pode substituí-lo." : "O conteúdo é uma página publicada: a versão otimizada é um exemplo de melhoria, não substituição integral."}`;
+      const bUser = `=== CONTEXTO DA MARCA (Brand Profile, IDs entre colchetes) ===\n${renderBrandContext(ctx)}\n\n=== INTENÇÃO ANALISADA ===\n"${searchQuery}"\n\n=== RECOMENDAÇÕES DO CONTENT SCORE (já calculado; não altere) ===\n${(a.action_plan ?? []).slice(0, 6).map((x: any) => `- ${x.action}`).join("\n")}\n\n=== CONTEÚDO ===\n${payload.text}\n\nAvalie o alinhamento com a marca usando a função.`;
+      const bRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [{ role: "system", content: bSystem }, { role: "user", content: bUser }],
+          tools: [{ type: "function", function: { name: "deliver_brand_alignment", description: "Structured brand alignment assessment", parameters: BRAND_TOOL_SCHEMA } }],
+          tool_choice: { type: "function", function: { name: "deliver_brand_alignment" } },
+        }),
+      });
+      if (!bRes.ok) { await bRes.text().catch(() => ""); throw new Error(`gateway_${bRes.status}`); }
+      const bArgs = extractToolArguments(await bRes.json());
+      if (!bArgs.ok) throw new Error("parse_failed");
+      const ba = validateBrandAssessment(bArgs.value, ctx, payload.text);
+      brand = { ...ba, brand_context_snapshot: ctx };
+      log("brand_alignment_completed", { brand_alignment_score: ba.brand_alignment_score, brand_alignment_partial: ba.brand_alignment_partial, discarded_references: ba.discarded_references });
+    } catch (e) {
+      brandContextStatus = "failed";
+      log("brand_alignment_failed", { reason: String((e as Error)?.message ?? "").slice(0, 80) });
+    }
+  }
+
   const result = {
     // Legacy flat format (kept for UI/PDF/API compatibility)
     ...r,
@@ -247,6 +293,10 @@ Faça a análise completa usando a função fornecida.`;
       citation_readiness: a.citation_raw, summary: a.summary, strengths: a.strengths, improvements: a.improvements,
       compatibility_diagnostic: a.compatibility_diagnostic, action_plan: a.action_plan,
     },
+    brand_aware: brandContextStatus === "ok",
+    brand_context_status: brandContextStatus,
+    empresa_id: brandEmpresaId,
+    ...brand,
     source_meta: {
       ...sourceMeta,
       input_type: inputType,
@@ -261,8 +311,8 @@ Faça a análise completa usando a função fornecida.`;
   if (auth.kind === "user" && userId && !workspaceId) log("persist_skipped", { reason: "no_workspace" });
   if (auth.kind === "user" && workspaceId && userId) {
     try {
-      let empresaId: string | null = null;
-      const host = inputType !== "webpage" ? null : (() => { try { return new URL(String(sourceMeta.final_url ?? websiteUrl)).hostname.replace(/^www\./, ""); } catch { return null; } })();
+      let empresaId: string | null = brandEmpresaId;
+      const host = empresaId || inputType !== "webpage" ? null : (() => { try { return new URL(String(sourceMeta.final_url ?? websiteUrl)).hostname.replace(/^www\./, ""); } catch { return null; } })();
       if (host) {
         const { data: emps } = await admin.from("empresas").select("id,url").eq("workspace_id", workspaceId);
         empresaId = (emps ?? []).find((e: any) => { try { return new URL(/^https?:/i.test(e.url) ? e.url : `https://${e.url}`).hostname.replace(/^www\./, "") === host; } catch { return false; } })?.id ?? null;
@@ -290,7 +340,7 @@ Faça a análise completa usando a função fornecida.`;
             const { error: planErr } = await admin.from("plano_de_acao").insert(items);
             if (planErr) log("persist_plan_failed", { code: planErr.code });
           }
-          log("persisted", { analysis_id: saved.id, input_type: inputType });
+          log("persisted", { analysis_id: saved.id, input_type: inputType, brand_aware: !!result.brand_aware });
         }
       }
     } catch (e) { log("persist_failed", { name: (e as Error)?.name, message: String((e as Error)?.message ?? "").slice(0, 200) }); }
@@ -303,10 +353,11 @@ Faça a análise completa usando a função fornecida.`;
       summary: r.summary, technical_signals: technicalSignals, source: "app",
       score_version: v2.score_version, content_score: v2.content_score, content_score_partial: v2.content_score_partial,
       score_dimensions: Object.fromEntries(Object.entries(v2.score_dimensions).map(([k, d]) => [k, { score: d.score, source: d.source, available: d.available }])),
+      ...brandWebhookFields(result, brandEmpresaId),
     }).then(() => log("webhook_dispatched")).catch(() => log("webhook_error"));
   }
 
-  log("completed", { score_version: v2.score_version, content_score: v2.content_score });
+  log("completed", { score_version: v2.score_version, content_score: v2.content_score, brand_aware: result.brand_aware, brand_alignment_partial: (brand as any).brand_alignment_partial ?? null });
   return respond(200, result);
 });
 
