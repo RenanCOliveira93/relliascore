@@ -72,6 +72,11 @@ serve(async (req) => {
     return respond(400, { error: "URL do site é obrigatória para análise de webpage" });
   }
 
+  // Plan quota is consumed server-side from the authenticated identity (never a client-sent user id).
+  if (auth.kind === "user") {
+    const { data: quotaOk, error: quotaErr } = await admin.rpc("increment_analysis_usage", { p_user_id: auth.userId });
+    if (quotaErr || quotaOk === false) return respond(402, { status: "analysis_failed", error: "Limite de análises do seu plano atingido." });
+  }
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) { log("config_error", { missing: "LOVABLE_API_KEY" }); return fail("analysis_failed", "Erro interno ao processar análise."); }
 

@@ -183,7 +183,7 @@ const Integrations = () => {
       user_id: user.id,
       name: newHook.name.trim(),
       url: newHook.url.trim(),
-      secret: newHook.secret.trim() || null,
+      secret: newHook.secret.trim() || Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join(""),
       events,
     });
     setCreatingHook(false);

@@ -47,8 +47,12 @@ export async function dispatchWebhooks(
             "X-Rellia-Event": event,
           };
           if (w.secret) {
-            const sig = await hmacSha256(w.secret, body);
-            headers["X-Rellia-Signature"] = `sha256=${sig}`;
+            // v1 (legacy, body only) kept for compatibility; v2 binds a unix timestamp to mitigate replay:
+            // HMAC_SHA256(secret, `${X-Rellia-Timestamp}.${body}`). Receivers should reject timestamps older than 5 min.
+            const ts = Math.floor(Date.now() / 1000).toString();
+            headers["X-Rellia-Signature"] = `sha256=${await hmacSha256(w.secret, body)}`;
+            headers["X-Rellia-Timestamp"] = ts;
+            headers["X-Rellia-Signature-V2"] = `v2=${await hmacSha256(w.secret, `${ts}.${body}`)}`;
           }
 
           const controller = new AbortController();
@@ -61,6 +65,8 @@ export async function dispatchWebhooks(
             signal: controller.signal,
           });
           clearTimeout(t);
+          // Fail closed on DNS rebinding: host must still resolve only to public addresses.
+          if (await assertPublicHost(norm.url, defaultResolver)) throw new Error("Webhook host changed to a private address");
 
           await admin.rpc("record_webhook_delivery", {
             p_webhook_id: w.id,
@@ -71,14 +77,14 @@ export async function dispatchWebhooks(
           await admin.rpc("record_webhook_delivery", {
             p_webhook_id: w.id,
             p_success: false,
-            p_error: (e as Error).message?.substring(0, 200) ?? "unknown",
+            p_error: ((e as Error).name === "AbortError" ? "timeout" : (e as Error).message?.substring(0, 200)) ?? "unknown",
           });
         }
       }),
   );
 }
 
-async function hmacSha256(secret: string, message: string): Promise<string> {
+export async function hmacSha256(secret: string, message: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
