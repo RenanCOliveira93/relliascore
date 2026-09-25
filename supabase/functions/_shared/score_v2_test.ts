@@ -91,7 +91,7 @@ Deno.test("v2: overall score is computed by the backend; LLM-provided score is i
   }
 });
 Deno.test("v2: technical GEO is deterministic from signals", () => {
-  assertEquals(computeTechnicalGeo(signals()).score, 100);
+  assertEquals(computeTechnicalGeo(signals({ final_url: "https://acme.com/" })).score, 100);
   const bad = computeTechnicalGeo(signals({ has_title: false, has_meta_description: false, h1_count: 0, robots_noindex: true }));
   // Ruleset v1: score = earned / applicable points (not_applicable/unavailable excluded) — same input, same output.
   const again = computeTechnicalGeo(signals({ has_title: false, has_meta_description: false, h1_count: 0, robots_noindex: true }));
@@ -216,7 +216,7 @@ Deno.test("v2: persistence columns carry version; legacy data adds nothing", () 
   const v = validateV2Assessment(llm());
   assert(v.ok);
   if (!v.ok) return;
-  const b = buildV2Scores(v.value, signals());
+  const b = buildV2Scores(v.value, signals({ final_url: "https://acme.com/" }));
   assert(b.ok);
   if (!b.ok) return;
   const row = v2AnaliseColumns({ ...b.value, technical_signals: signals() });
