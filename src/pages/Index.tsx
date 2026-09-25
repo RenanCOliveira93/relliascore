@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,6 +69,11 @@ const Index = () => {
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const { activeWorkspace } = useWorkspace();
+  useEffect(() => {
+    if (!activeWorkspace) { setBrandEmpresas([]); return; }
+    supabase.from("empresas").select("id,nome,url,linkedin_url,instagram_url,descricao").eq("workspace_id", activeWorkspace.id).order("nome")
+      .then(({ data }) => setBrandEmpresas((data ?? []) as BrandFormEmpresa[]));
+  }, [activeWorkspace]);
   const { planConfig, canAnalyze, remainingAnalyses, subscription, refreshSubscription } = useSubscription();
 
   const handleAnalyze = async () => {
@@ -156,6 +161,7 @@ const Index = () => {
     instagram: string;
     description: string;
     mode: AnalysisMode;
+    empresaId: string | null;
   }) => {
     if (!canAnalyze) {
       toast({ title: "Limite atingido", description: "Você atingiu o limite de análises do seu plano.", variant: "destructive" });
