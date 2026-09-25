@@ -310,6 +310,7 @@ export type Database = {
           description: string | null
           evidence: string | null
           explicit_or_inferred: string
+          human_status: string
           id: string
           industries: string[]
           name: string
@@ -317,10 +318,13 @@ export type Database = {
           observed_at: string
           origin: string
           problems: string[]
+          reviewed_at: string | null
+          reviewed_by: string | null
           roles: string[]
           source_type: string
           source_url: string | null
           sources: Json
+          supersedes_id: string | null
           updated_at: string
         }
         Insert: {
@@ -332,6 +336,7 @@ export type Database = {
           description?: string | null
           evidence?: string | null
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           industries?: string[]
           name: string
@@ -339,10 +344,13 @@ export type Database = {
           observed_at?: string
           origin?: string
           problems?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           roles?: string[]
           source_type: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -354,6 +362,7 @@ export type Database = {
           description?: string | null
           evidence?: string | null
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           industries?: string[]
           name?: string
@@ -361,10 +370,13 @@ export type Database = {
           observed_at?: string
           origin?: string
           problems?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           roles?: string[]
           source_type?: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -373,6 +385,76 @@ export type Database = {
             columns: ["brand_brain_id"]
             isOneToOne: false
             referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_audit_log: {
+        Row: {
+          action: string
+          brand_brain_id: string | null
+          created_at: string
+          empresa_id: string
+          field: string | null
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          request_id: string | null
+          target_id: string | null
+          target_table: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          brand_brain_id?: string | null
+          created_at?: string
+          empresa_id: string
+          field?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          request_id?: string | null
+          target_id?: string | null
+          target_table?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          brand_brain_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          field?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          request_id?: string | null
+          target_id?: string | null
+          target_table?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_audit_log_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_audit_log_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_audit_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -497,6 +579,61 @@ export type Database = {
           },
         ]
       }
+      brand_claim_evidence: {
+        Row: {
+          brand_brain_id: string
+          claim_id: string
+          created_at: string
+          created_by: string | null
+          evidence_id: string
+          id: string
+          origin: string
+          relationship_type: string
+        }
+        Insert: {
+          brand_brain_id: string
+          claim_id: string
+          created_at?: string
+          created_by?: string | null
+          evidence_id: string
+          id?: string
+          origin?: string
+          relationship_type?: string
+        }
+        Update: {
+          brand_brain_id?: string
+          claim_id?: string
+          created_at?: string
+          created_by?: string | null
+          evidence_id?: string
+          id?: string
+          origin?: string
+          relationship_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_claim_evidence_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_claim_evidence_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "brand_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_claim_evidence_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "brand_evidence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_claims: {
         Row: {
           brand_brain_id: string
@@ -507,13 +644,17 @@ export type Database = {
           evidence: string | null
           evidence_refs: string[]
           explicit_or_inferred: string
+          human_status: string
           id: string
           observed_at: string
           origin: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
           statement: string
+          supersedes_id: string | null
           updated_at: string
           verification_status: string
         }
@@ -526,13 +667,17 @@ export type Database = {
           evidence?: string | null
           evidence_refs?: string[]
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
           statement: string
+          supersedes_id?: string | null
           updated_at?: string
           verification_status: string
         }
@@ -545,13 +690,17 @@ export type Database = {
           evidence?: string | null
           evidence_refs?: string[]
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
           statement?: string
+          supersedes_id?: string | null
           updated_at?: string
           verification_status?: string
         }
@@ -574,13 +723,17 @@ export type Database = {
           created_at: string
           evidence: string | null
           explicit_or_inferred: string
+          human_status: string
           id: string
           observed_at: string
           origin: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
           statement: string
+          supersedes_id: string | null
           updated_at: string
         }
         Insert: {
@@ -591,13 +744,17 @@ export type Database = {
           created_at?: string
           evidence?: string | null
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
           statement: string
+          supersedes_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -608,13 +765,17 @@ export type Database = {
           created_at?: string
           evidence?: string | null
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
           statement?: string
+          supersedes_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -637,14 +798,18 @@ export type Database = {
           entity_type: string
           evidence: string | null
           explicit_or_inferred: string
+          human_status: string
           id: string
           name: string
           observed_at: string
           origin: string
           relationship: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
+          supersedes_id: string | null
           updated_at: string
         }
         Insert: {
@@ -656,14 +821,18 @@ export type Database = {
           entity_type: string
           evidence?: string | null
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           name: string
           observed_at?: string
           origin?: string
           relationship?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -675,14 +844,18 @@ export type Database = {
           entity_type?: string
           evidence?: string | null
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           name?: string
           observed_at?: string
           origin?: string
           relationship?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -705,12 +878,16 @@ export type Database = {
           evidence: string | null
           evidence_type: string
           explicit_or_inferred: string
+          human_status: string
           id: string
           observed_at: string
           origin: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
+          supersedes_id: string | null
           title: string
           updated_at: string
           value: string | null
@@ -724,12 +901,16 @@ export type Database = {
           evidence?: string | null
           evidence_type: string
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           title: string
           updated_at?: string
           value?: string | null
@@ -743,12 +924,16 @@ export type Database = {
           evidence?: string | null
           evidence_type?: string
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           title?: string
           updated_at?: string
           value?: string | null
@@ -756,6 +941,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "brand_evidence_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_field_overrides: {
+        Row: {
+          brand_brain_id: string
+          carried_from_id: string | null
+          created_at: string
+          field: string
+          id: string
+          observed_value: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+          value: Json | null
+        }
+        Insert: {
+          brand_brain_id: string
+          carried_from_id?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          observed_value?: Json | null
+          status: string
+          updated_at?: string
+          user_id: string
+          value?: Json | null
+        }
+        Update: {
+          brand_brain_id?: string
+          carried_from_id?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          observed_value?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_field_overrides_brand_brain_id_fkey"
             columns: ["brand_brain_id"]
             isOneToOne: false
             referencedRelation: "brand_brains"
@@ -773,14 +1005,18 @@ export type Database = {
           description: string | null
           evidence: string | null
           explicit_or_inferred: string
+          human_status: string
           id: string
           name: string
           observed_at: string
           origin: string
           problems_solved: string[]
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
+          supersedes_id: string | null
           target_audience: string | null
           type: string
           updated_at: string
@@ -795,14 +1031,18 @@ export type Database = {
           description?: string | null
           evidence?: string | null
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           name: string
           observed_at?: string
           origin?: string
           problems_solved?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           target_audience?: string | null
           type: string
           updated_at?: string
@@ -817,14 +1057,18 @@ export type Database = {
           description?: string | null
           evidence?: string | null
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           name?: string
           observed_at?: string
           origin?: string
           problems_solved?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           target_audience?: string | null
           type?: string
           updated_at?: string
@@ -850,15 +1094,19 @@ export type Database = {
           differentiators: string[]
           evidence: string | null
           explicit_or_inferred: string
+          human_status: string
           id: string
           kind: string
           observed_at: string
           origin: string
           primary_category: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
           statement: string | null
+          supersedes_id: string | null
           target_market: string | null
           updated_at: string
           value_proposition: string | null
@@ -872,15 +1120,19 @@ export type Database = {
           differentiators?: string[]
           evidence?: string | null
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           kind: string
           observed_at?: string
           origin?: string
           primary_category?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
           statement?: string | null
+          supersedes_id?: string | null
           target_market?: string | null
           updated_at?: string
           value_proposition?: string | null
@@ -894,15 +1146,19 @@ export type Database = {
           differentiators?: string[]
           evidence?: string | null
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           kind?: string
           observed_at?: string
           origin?: string
           primary_category?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
           statement?: string | null
+          supersedes_id?: string | null
           target_market?: string | null
           updated_at?: string
           value_proposition?: string | null
@@ -927,14 +1183,18 @@ export type Database = {
           description: string | null
           evidence: string | null
           explicit_or_inferred: string
+          human_status: string
           id: string
           name: string
           observed_at: string
           origin: string
           related_offerings: string[]
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
+          supersedes_id: string | null
           updated_at: string
         }
         Insert: {
@@ -946,14 +1206,18 @@ export type Database = {
           description?: string | null
           evidence?: string | null
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           name: string
           observed_at?: string
           origin?: string
           related_offerings?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -965,14 +1229,18 @@ export type Database = {
           description?: string | null
           evidence?: string | null
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           name?: string
           observed_at?: string
           origin?: string
           related_offerings?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -996,16 +1264,20 @@ export type Database = {
           detected_fonts: string[]
           evidence: string | null
           explicit_or_inferred: string
+          human_status: string
           id: string
           imagery_style: string | null
           logo_url: string | null
           observed_at: string
           origin: string
           primary_colors: Json
+          reviewed_at: string | null
+          reviewed_by: string | null
           secondary_colors: Json
           source_type: string
           source_url: string | null
           sources: Json
+          supersedes_id: string | null
           updated_at: string
           visual_style: string | null
         }
@@ -1019,16 +1291,20 @@ export type Database = {
           detected_fonts?: string[]
           evidence?: string | null
           explicit_or_inferred: string
+          human_status?: string
           id?: string
           imagery_style?: string | null
           logo_url?: string | null
           observed_at?: string
           origin?: string
           primary_colors?: Json
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           secondary_colors?: Json
           source_type: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
           visual_style?: string | null
         }
@@ -1042,16 +1318,20 @@ export type Database = {
           detected_fonts?: string[]
           evidence?: string | null
           explicit_or_inferred?: string
+          human_status?: string
           id?: string
           imagery_style?: string | null
           logo_url?: string | null
           observed_at?: string
           origin?: string
           primary_colors?: Json
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           secondary_colors?: Json
           source_type?: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           updated_at?: string
           visual_style?: string | null
         }
@@ -1077,13 +1357,17 @@ export type Database = {
           evidence: string | null
           explicit_or_inferred: string
           formality: string | null
+          human_status: string
           id: string
           observed_at: string
           origin: string
           recurring_phrases: string[]
+          reviewed_at: string | null
+          reviewed_by: string | null
           source_type: string
           source_url: string | null
           sources: Json
+          supersedes_id: string | null
           tone_traits: string[]
           updated_at: string
           vocabulary_avoided: string[]
@@ -1100,13 +1384,17 @@ export type Database = {
           evidence?: string | null
           explicit_or_inferred: string
           formality?: string | null
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
           recurring_phrases?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           tone_traits?: string[]
           updated_at?: string
           vocabulary_avoided?: string[]
@@ -1123,13 +1411,17 @@ export type Database = {
           evidence?: string | null
           explicit_or_inferred?: string
           formality?: string | null
+          human_status?: string
           id?: string
           observed_at?: string
           origin?: string
           recurring_phrases?: string[]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           source_type?: string
           source_url?: string | null
           sources?: Json
+          supersedes_id?: string | null
           tone_traits?: string[]
           updated_at?: string
           vocabulary_avoided?: string[]
@@ -1627,6 +1919,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bb_item_key: { Args: { p_table: string; r: Json }; Returns: string }
+      bb_norm: { Args: { p: string }; Returns: string }
       check_rate_limit: {
         Args: {
           p_endpoint: string
