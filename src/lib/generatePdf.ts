@@ -167,7 +167,7 @@ export function generateAnalysisPdf(result: AnalysisResult, websiteUrl: string, 
   const { doc, filename } = result.score_version === "2.0"
     ? buildAnalysisPdfV2(result, websiteUrl, searchQuery, mode)
     : buildLegacyAnalysisPdf(result, websiteUrl, searchQuery, mode);
-  return { doc, filename };
+  doc.save(filename);
 }
 
 /** Legacy (pre-2.0) PDF — layout preserved. */
@@ -479,7 +479,7 @@ export function buildLegacyAnalysisPdf(
   const profileName = extractProfileName(websiteUrl);
   const date = new Date().toISOString().slice(0, 10);
   const filename = sanitizeFilename(`Rellia-${tipo}-${profileName}-${date}.pdf`);
-  doc.save(filename);
+  return { doc, filename };
 }
 
 export function extractProfileName(source: string): string {
