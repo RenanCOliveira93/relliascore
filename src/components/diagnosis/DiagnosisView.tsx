@@ -89,7 +89,7 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
       <section className="rounded-xl border border-border bg-card/80 backdrop-blur-md p-6 sm:p-8">
         <div className="grid gap-6 md:grid-cols-[auto,1fr] md:items-center">
           <div className="text-center md:text-left md:pr-8 md:border-r md:border-border">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">RELLIA Content Score <Help text={SCORE_HELP} /></p>
+            <p className="inline-flex items-center gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">RELLIA Content Score</span><Help text={SCORE_HELP} /></p>
             <p className={`text-7xl sm:text-8xl font-bold tabular-nums leading-none mt-2 ${TONE_TEXT[tone]}`}>{animated}</p>
             <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2">
               <Pill>Score 2.0</Pill>

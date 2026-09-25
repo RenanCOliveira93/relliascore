@@ -228,7 +228,7 @@ const Historico = () => {
         </main>
       </div>
       <Dialog open={!!opened} onOpenChange={(o) => !o && setOpened(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader><DialogTitle>Diagnóstico salvo</DialogTitle></DialogHeader>
           {opened && (
             <ScoreDisplay
