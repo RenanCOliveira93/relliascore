@@ -17,6 +17,8 @@ export type Database = {
       analises: {
         Row: {
           action_plan: Json | null
+          ai_crawler_access: Json | null
+          analysis_mode: string | null
           citation_readiness: Json | null
           content_claims: Json | null
           content_score: number | null
@@ -33,20 +35,35 @@ export type Database = {
           entity_signals: Json | null
           evidence_readiness: Json | null
           id: string
+          input_type: string | null
           keywords_analysis: Json | null
           origem: string
+          page_type: string | null
+          page_type_confidence: number | null
+          page_type_source: string | null
           score: number | null
           score_dimensions: Json | null
           score_version: string | null
+          search_query: string | null
+          structured_data_recommendations: Json | null
           sub_scores: Json | null
           summary: string | null
+          technical_geo_coverage: number | null
+          technical_geo_critical_issues: Json | null
+          technical_geo_quick_wins: Json | null
+          technical_geo_rules: Json | null
+          technical_geo_version: string | null
           technical_signals: Json | null
           tipo: string
           user_id: string
+          website_url: string | null
+          weights_applied: Json | null
           workspace_id: string
         }
         Insert: {
           action_plan?: Json | null
+          ai_crawler_access?: Json | null
+          analysis_mode?: string | null
           citation_readiness?: Json | null
           content_claims?: Json | null
           content_score?: number | null
@@ -63,20 +80,35 @@ export type Database = {
           entity_signals?: Json | null
           evidence_readiness?: Json | null
           id?: string
+          input_type?: string | null
           keywords_analysis?: Json | null
           origem?: string
+          page_type?: string | null
+          page_type_confidence?: number | null
+          page_type_source?: string | null
           score?: number | null
           score_dimensions?: Json | null
           score_version?: string | null
+          search_query?: string | null
+          structured_data_recommendations?: Json | null
           sub_scores?: Json | null
           summary?: string | null
+          technical_geo_coverage?: number | null
+          technical_geo_critical_issues?: Json | null
+          technical_geo_quick_wins?: Json | null
+          technical_geo_rules?: Json | null
+          technical_geo_version?: string | null
           technical_signals?: Json | null
           tipo: string
           user_id: string
+          website_url?: string | null
+          weights_applied?: Json | null
           workspace_id: string
         }
         Update: {
           action_plan?: Json | null
+          ai_crawler_access?: Json | null
+          analysis_mode?: string | null
           citation_readiness?: Json | null
           content_claims?: Json | null
           content_score?: number | null
@@ -93,16 +125,29 @@ export type Database = {
           entity_signals?: Json | null
           evidence_readiness?: Json | null
           id?: string
+          input_type?: string | null
           keywords_analysis?: Json | null
           origem?: string
+          page_type?: string | null
+          page_type_confidence?: number | null
+          page_type_source?: string | null
           score?: number | null
           score_dimensions?: Json | null
           score_version?: string | null
+          search_query?: string | null
+          structured_data_recommendations?: Json | null
           sub_scores?: Json | null
           summary?: string | null
+          technical_geo_coverage?: number | null
+          technical_geo_critical_issues?: Json | null
+          technical_geo_quick_wins?: Json | null
+          technical_geo_rules?: Json | null
+          technical_geo_version?: string | null
           technical_signals?: Json | null
           tipo?: string
           user_id?: string
+          website_url?: string | null
+          weights_applied?: Json | null
           workspace_id?: string
         }
         Relationships: [
