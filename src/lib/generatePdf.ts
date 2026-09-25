@@ -1,7 +1,8 @@
+import { buildAnalysisPdfV2 } from "./generatePdfV2";
 import jsPDF from "jspdf";
 import { DIMENSION_LABELS, type AnalysisResult, type DimensionKey } from "@/types/analysis";
 
-const COLORS = {
+export const COLORS = {
   primary: [99, 102, 241] as [number, number, number],
   dark: [30, 30, 46] as [number, number, number],
   muted: [120, 120, 140] as [number, number, number],
@@ -13,13 +14,13 @@ const COLORS = {
   orange: [249, 115, 22] as [number, number, number],
 };
 
-function getScoreColor(score: number): [number, number, number] {
+export function getScoreColor(score: number): [number, number, number] {
   if (score >= 70) return COLORS.success;
   if (score >= 40) return COLORS.warning;
   return COLORS.danger;
 }
 
-function addPageIfNeeded(doc: jsPDF, y: number, needed: number = 20): number {
+export function addPageIfNeeded(doc: jsPDF, y: number, needed: number = 20): number {
   if (y + needed > 275) {
     doc.addPage();
     return 20;
@@ -27,7 +28,7 @@ function addPageIfNeeded(doc: jsPDF, y: number, needed: number = 20): number {
   return y;
 }
 
-function drawWrappedText(doc: jsPDF, text: string, x: number, y: number, maxWidth: number, lineHeight: number = 5): number {
+export function drawWrappedText(doc: jsPDF, text: string, x: number, y: number, maxWidth: number, lineHeight: number = 5): number {
   const lines = doc.splitTextToSize(text, maxWidth);
   for (const line of lines) {
     y = addPageIfNeeded(doc, y, lineHeight + 2);
@@ -37,7 +38,7 @@ function drawWrappedText(doc: jsPDF, text: string, x: number, y: number, maxWidt
   return y;
 }
 
-function drawSectionTitle(doc: jsPDF, title: string, y: number, margin: number, color: [number, number, number] = COLORS.primary): number {
+export function drawSectionTitle(doc: jsPDF, title: string, y: number, margin: number, color: [number, number, number] = COLORS.primary): number {
   y = addPageIfNeeded(doc, y, 15);
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
@@ -162,12 +163,20 @@ function drawRadarChart(
   }
 }
 
-export function generateAnalysisPdf(
+export function generateAnalysisPdf(result: AnalysisResult, websiteUrl: string, searchQuery: string, mode: string): void {
+  const { doc, filename } = result.score_version === "2.0"
+    ? buildAnalysisPdfV2(result, websiteUrl, searchQuery, mode)
+    : buildLegacyAnalysisPdf(result, websiteUrl, searchQuery, mode);
+  return { doc, filename };
+}
+
+/** Legacy (pre-2.0) PDF — layout preserved. */
+export function buildLegacyAnalysisPdf(
   result: AnalysisResult,
   websiteUrl: string,
   searchQuery: string,
   mode: string
-): void {
+): { doc: jsPDF; filename: string } {
   const doc = new jsPDF("p", "mm", "a4");
   const pageWidth = 210;
   const margin = 15;
@@ -473,7 +482,7 @@ export function generateAnalysisPdf(
   doc.save(filename);
 }
 
-function extractProfileName(source: string): string {
+export function extractProfileName(source: string): string {
   if (!source) return "Analise";
   // Try to extract a meaningful name from a URL
   try {
@@ -491,12 +500,12 @@ function extractProfileName(source: string): string {
   return "Analise";
 }
 
-function capitalize(s: string): string {
+export function capitalize(s: string): string {
   if (!s) return "Analise";
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
-function sanitizeFilename(name: string): string {
+export function sanitizeFilename(name: string): string {
   return name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // strip accents
