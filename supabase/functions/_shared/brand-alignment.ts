@@ -233,7 +233,7 @@ export function validateBrandAssessment(raw: any, ctx: BrandContextSnapshot, ori
     return [{ text: t, dimension: r.dimension, brand_reference: refOf(r.brand_ref) }];
   }).slice(0, 8);
 
-  const allowed = `${originalContent}\n${JSON.stringify(ctx)}`;
+  const allowed = `${originalContent}\n${JSON.stringify({ ...ctx, selection: undefined, brand_brain_version: undefined }).replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "")}`;
   const opt = guardOptimized(s(raw?.optimized_version, 20000), allowed);
   const calc = computeBrandAlignment(dims);
   return {
