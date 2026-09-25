@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,19 +14,40 @@ interface BrandAnalysisFormProps {
     instagram: string;
     description: string;
     mode: AnalysisMode;
+    empresaId: string | null;
   }) => void;
   isAnalyzing: boolean;
+  empresas?: BrandFormEmpresa[];
+  initialEmpresaId?: string | null;
 }
 
-const BrandAnalysisForm = ({ onAnalyze, isAnalyzing }: BrandAnalysisFormProps) => {
+export interface BrandFormEmpresa { id: string; nome: string; url: string; linkedin_url: string | null; instagram_url: string | null; descricao: string | null }
+
+const BrandAnalysisForm = ({ onAnalyze, isAnalyzing, empresas = [], initialEmpresaId = null }: BrandAnalysisFormProps) => {
   const [website, setWebsite] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [instagram, setInstagram] = useState("");
   const [description, setDescription] = useState("");
   const [mode, setMode] = useState<AnalysisMode>("business");
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
+
+  // Explicit company context: selecting a company pre-fills its sources; the id is sent to the server.
+  const selectEmpresa = (id: string | null) => {
+    setEmpresaId(id);
+    const e = empresas.find((x) => x.id === id);
+    if (!e) return;
+    setWebsite(e.url ?? "");
+    setLinkedin(e.linkedin_url ?? "");
+    setInstagram(e.instagram_url ?? "");
+    if (e.descricao) setDescription(e.descricao);
+  };
+  useEffect(() => {
+    if (initialEmpresaId && empresas.some((e) => e.id === initialEmpresaId)) selectEmpresa(initialEmpresaId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEmpresaId, empresas]);
 
   const handleSubmit = () => {
-    onAnalyze({ website, linkedin, instagram, description, mode });
+    onAnalyze({ website, linkedin, instagram, description, mode, empresaId });
   };
 
   const isValid = description.trim().length >= 10;
@@ -44,6 +65,23 @@ const BrandAnalysisForm = ({ onAnalyze, isAnalyzing }: BrandAnalysisFormProps) =
       </CardHeader>
       <CardContent className="space-y-6">
         <AnalysisModeTabs mode={mode} onModeChange={setMode} />
+
+        {empresas.length > 0 && (
+          <div className="space-y-2">
+            <label htmlFor="brand-empresa" className="text-sm font-medium">Empresa</label>
+            <select
+              id="brand-empresa"
+              aria-label="Empresa"
+              className="h-11 w-full rounded-md border border-input bg-input/50 px-3 text-sm"
+              value={empresaId ?? ""}
+              onChange={(e) => selectEmpresa(e.target.value || null)}
+            >
+              <option value="">Nenhuma (não salva no Brand Profile)</option>
+              {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+            </select>
+            <p className="text-xs text-muted-foreground">Com uma empresa selecionada, o resultado atualiza o Brand Profile dela.</p>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">

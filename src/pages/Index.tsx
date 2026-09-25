@@ -17,7 +17,8 @@ import ScoreDisplay from "@/components/ScoreDisplay";
 import AnalysisModeTabs from "@/components/AnalysisModeTabs";
 import InputTypeSelector from "@/components/InputTypeSelector";
 import VideoBackground from "@/components/VideoBackground";
-import BrandAnalysisForm from "@/components/BrandAnalysisForm";
+import BrandAnalysisForm, { type BrandFormEmpresa } from "@/components/BrandAnalysisForm";
+import { useSearchParams } from "react-router-dom";
 import BrandAnalysisResults from "@/components/BrandAnalysisResults";
 import BrandAnalysisHistory from "@/components/BrandAnalysisHistory";
 import { generateAnalysisPdf } from "@/lib/generatePdf";
@@ -61,6 +62,8 @@ const Index = () => {
   const [brandResult, setBrandResult] = useState<BrandAnalysisResult | null>(null);
   const [brandMode, setBrandMode] = useState<AnalysisMode>("business");
   const [brandHistoryKey, setBrandHistoryKey] = useState(0);
+  const [searchParams] = useSearchParams();
+  const [brandEmpresas, setBrandEmpresas] = useState<BrandFormEmpresa[]>([]);
   const [brandSources, setBrandSources] = useState<{ website?: string; linkedin?: string; instagram?: string; description?: string }>({});
 
   const { toast } = useToast();
@@ -174,7 +177,7 @@ const Index = () => {
     try {
       if (!canAnalyze) throw new Error("Limite de análises atingido.");
       const { data: result, error } = await supabase.functions.invoke('analyze-brand', {
-        body: { ...data, workspaceId: activeWorkspace?.id ?? null }
+        body: { ...data, workspaceId: activeWorkspace?.id ?? null, empresaId: data.empresaId }
       });
       if (error) { const f = await readFunctionError(error); refreshSubscription(); throw new Error(f.error); }
       if (result.error) throw new Error(result.error);
@@ -256,7 +259,7 @@ const Index = () => {
         </header>
 
         <main className="container mx-auto px-4 py-8 max-w-4xl">
-          <Tabs defaultValue="relevance" className="w-full">
+          <Tabs defaultValue={searchParams.get("tab") === "brand" ? "brand" : "relevance"} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
               <TabsTrigger value="relevance" className="text-sm gap-2 h-10">
                 <Search className="h-4 w-4" />
@@ -478,7 +481,7 @@ const Index = () => {
                     }}
                   />
 
-                  <BrandAnalysisForm onAnalyze={handleBrandAnalyze} isAnalyzing={isBrandAnalyzing} />
+                  <BrandAnalysisForm onAnalyze={handleBrandAnalyze} isAnalyzing={isBrandAnalyzing} empresas={brandEmpresas} initialEmpresaId={searchParams.get("empresa")} />
                 </div>
               )}
 
