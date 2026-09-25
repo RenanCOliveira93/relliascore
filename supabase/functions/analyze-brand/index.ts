@@ -4,6 +4,8 @@ import { safeFetch } from "../_shared/url-safety.ts";
 import { extractPage } from "../_shared/extract.ts";
 import { budgetBlocks, metadataSection } from "../_shared/content-budget.ts";
 import { extractToolArguments, validateBrandResult } from "../_shared/model-parse.ts";
+import { BRAND_BRAIN_SCHEMA, hasKnowledge, normalizeBrandBrain, sourceStatusFromFetch, type BrandSourceStatus } from "../_shared/brand-brain.ts";
+import { resolveEmpresa } from "../_shared/brand-brain-store.ts";
 import {
   adminClient, authenticate, checkRateLimits, clientIp, createLogger, jsonResponse, privateCors, refundUsage, verifyWorkspace,
 } from "../_shared/http.ts";
@@ -63,31 +65,38 @@ serve(async (req) => {
 
   // Fetch each provided source safely; failures are reported explicitly, never replaced by guesses.
   const sources: SourceStatus[] = [];
+  const brainSources: BrandSourceStatus[] = [{ source: "user_description", status: "fetched" }];
   const contents: string[] = [];
   for (const [label, url] of [["SITE", website], ["LINKEDIN", linkedin], ["INSTAGRAM", instagram]] as const) {
-    if (!url || typeof url !== "string" || !url.trim()) continue;
+    const key = label === "SITE" ? "website" : (label.toLowerCase() as "linkedin" | "instagram");
+    if (!url || typeof url !== "string" || !url.trim()) { brainSources.push(sourceStatusFromFetch(key, url, null)); continue; }
     log("crawl_started", { source: label });
     const f = await safeFetch(url);
     if (!f.ok) {
       sources.push({ source: label.toLowerCase(), status: f.status, reason: f.reason });
+      brainSources.push(sourceStatusFromFetch(key, url, { ok: false, status: f.status, reason: f.reason }));
       log("crawl_failed", { source: label, status: f.status });
       continue;
     }
     const page = extractPage(f.body, { requestedUrl: f.requestedUrl, finalUrl: f.finalUrl, httpStatus: f.httpStatus, htmlTruncated: f.bodyTruncated });
-    if (page.word_count < 15) {
-      sources.push({ source: label.toLowerCase(), status: "crawl_failed", reason: "Conteúdo insuficiente (página pode exigir login ou JavaScript)." });
+    const st = sourceStatusFromFetch(key, url, { ok: true, finalUrl: f.finalUrl, wordCount: page.word_count });
+    if (st.status !== "fetched") {
+      sources.push({ source: label.toLowerCase(), status: "crawl_failed", reason: st.reason });
+      brainSources.push(st);
       continue;
     }
     const payload = budgetBlocks(page.content_blocks, description, 5000);
     contents.push(`[${label}] ${f.finalUrl}\n${metadataSection(page)}\nConteúdo${payload.content_truncated ? " (selecionado)" : ""}:\n${payload.text}`);
     sources.push({ source: label.toLowerCase(), status: "success", content_truncated: payload.content_truncated });
+    brainSources.push({ ...st, content_truncated: payload.content_truncated });
     log("extraction_completed", { source: label, word_count: page.word_count });
   }
 
   const modeLabel = mode === "influencer" ? "Influencer / Marca Pessoal" : "Empresa / Empreendimento";
   const systemPrompt = `Você é um especialista sênior em branding, posicionamento de marca, comunicação digital e análise de presença online. Perfil: ${modeLabel}.
 Analise a marca de forma completa: tom de voz, público, nicho, estilo visual, resumo, palavras-chave, cores, temas, forças, fraquezas, posicionamento, diferencial, consistência (0-100), comunicação, presença digital e recomendações.
-Regras: baseie-se apenas na descrição e nos conteúdos efetivamente extraídos. Fontes marcadas como NÃO ACESSADAS não devem ser descritas como se tivessem sido lidas; quando a análise depender de inferência, deixe isso claro no texto. Seja específico, não genérico.`;
+Regras: baseie-se apenas na descrição e nos conteúdos efetivamente extraídos. Fontes marcadas como NÃO ACESSADAS não devem ser descritas como se tivessem sido lidas; quando a análise depender de inferência, deixe isso claro no texto. Seja específico, não genérico.
+Além disso, preencha brand_brain com conhecimento ESTRUTURADO: cada item indica a fonte (source_type), um trecho curto de evidência, a confiança da extração (0–1) e se é explícito ou inferido. Use apenas fontes efetivamente lidas (as NÃO ACESSADAS não podem ser citadas). Não complete lacunas com o que o mercado costuma oferecer: use null ou []. Registre o posicionamento declarado (descrição do usuário) separado do observado (site/redes), sem unificá-los. Não inclua raciocínio interno.`;
 
   const failed = sources.filter((s) => s.status !== "success").map((s) => `${s.source.toUpperCase()}: NÃO ACESSADA (${s.reason})`);
   const userPrompt = `Descrição fornecida:\n${description}\n\n${failed.length ? `Fontes não acessadas:\n${failed.join("\n")}\n\n` : ""}Conteúdo extraído:\n${contents.join("\n\n") || "Nenhum conteúdo extraído; use apenas a descrição."}\n\nFaça a análise completa usando a função fornecida.`;
@@ -121,7 +130,26 @@ Regras: baseie-se apenas na descrição e nos conteúdos efetivamente extraídos
   const v = args.ok ? validateBrandResult(args.value) : args;
   if (!v.ok) { log("parse_failed", { reason: v.reason }); return fail(502, "Não foi possível interpretar a resposta da IA. Tente novamente."); }
   log("parse_completed");
-  const result = { ...v.value, status: "success", analysis_id: requestId, sources_status: sources } as any;
+  const { brand_brain: rawBrain, ...legacy } = v.value as Record<string, unknown>;
+  const result = { ...legacy, status: "success", analysis_id: requestId, sources_status: sources } as any;
+
+  // Brand Brain: persisted as a new version only for a company owned by this user in this workspace.
+  const ownerId = auth.kind === "user" ? auth.userId : auth.userId;
+  const primaryDomain = hostOf(brainSources.find((s) => s.source === "website" && s.status === "fetched")?.url ?? (typeof website === "string" ? website : ""));
+  const brain = normalizeBrandBrain(rawBrain, { sources: brainSources, primaryDomain });
+  let brandBrain: Record<string, unknown> = { persisted: false, sources_status: brainSources, dropped_items: brain.dropped };
+  if (ownerId && workspaceId) {
+    const empresaId = await resolveEmpresa(admin, ownerId, workspaceId, body?.empresaId, primaryDomain);
+    if (!empresaId) brandBrain.reason = "no_empresa";
+    else if (!hasKnowledge(brain)) brandBrain.reason = "no_structured_knowledge";
+    else {
+      const { data, error } = await admin.rpc("persist_brand_brain", { p_user_id: ownerId, p_workspace_id: workspaceId, p_empresa_id: empresaId, p_request_id: requestId, p_payload: { brain: brain.brain, children: brain.children } });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (error || !row) { log("brand_brain_persist_failed", { code: error?.code, message: error?.message?.slice(0, 200) }); brandBrain.reason = "persist_failed"; }
+      else { brandBrain = { ...brandBrain, persisted: true, brand_brain_id: row.brand_brain_id, version: row.version, empresa_id: empresaId, extraction_confidence: brain.brain.extraction_confidence }; log("brand_brain_persisted", { version: row.version }); }
+    }
+  }
+  result.brand_brain = brandBrain;
 
   if (auth.kind === "user" && workspaceId) {
     dispatchWebhooks(workspaceId, "brand_analysis.completed", {
@@ -148,7 +176,12 @@ const BRAND_SCHEMA = {
     consistencia_score: { type: "number" },
     comunicacao_analise: { type: "string" }, presenca_digital: { type: "string" },
     recomendacoes: { type: "array", items: { type: "string" } },
+    brand_brain: BRAND_BRAIN_SCHEMA,
   },
-  required: ["tom_de_voz", "publico_alvo", "nicho", "estilo_visual", "resumo_marca", "palavras_chave", "cores_marca", "temas_sugeridos", "pontos_fortes", "pontos_fracos", "posicionamento", "diferencial", "consistencia_score", "comunicacao_analise", "presenca_digital", "recomendacoes"],
+  required: ["tom_de_voz", "publico_alvo", "nicho", "estilo_visual", "resumo_marca", "palavras_chave", "cores_marca", "temas_sugeridos", "pontos_fortes", "pontos_fracos", "posicionamento", "diferencial", "consistencia_score", "comunicacao_analise", "presenca_digital", "recomendacoes", "brand_brain"],
   additionalProperties: false,
 };
+
+function hostOf(u: string): string | null {
+  try { return new URL(/^https?:\/\//i.test(u) ? u : `https://${u}`).hostname.replace(/^www\./, "").toLowerCase() || null; } catch { return null; }
+}
