@@ -449,7 +449,7 @@ const Index = () => {
                     </CardContent>
                   </Card>
 
-                  <ScoreDisplay result={result} />
+                  <ScoreDisplay result={result} context={{ source: websiteUrl, query: searchQuery, inputType }} />
                 </div>
               )}
             </TabsContent>
