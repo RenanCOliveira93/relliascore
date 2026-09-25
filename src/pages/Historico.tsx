@@ -33,6 +33,10 @@ interface Analise {
   origem: string;
   empresa_id: string | null;
   created_at: string;
+  score_version?: string | null;
+  content_score_partial?: boolean | null;
+  input_type?: string | null;
+  website_url?: string | null;
 }
 interface AnaliseComp {
   id: string;
@@ -164,6 +168,9 @@ const Historico = () => {
                           <CardTitle className="text-base capitalize">{a.tipo} — {empresaName(a.empresa_id)}</CardTitle>
                           <CardDescription className="text-xs">
                             {new Date(a.created_at).toLocaleString("pt-BR")} · origem: {a.origem}
+                            {a.score_version === "2.0" ? " · Score 2.0" : " · legado"}
+                            {a.content_score_partial ? " (parcial, texto)" : ""}
+                            {a.website_url ? ` · ${a.website_url}` : ""}
                           </CardDescription>
                         </div>
                       </div>
