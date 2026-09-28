@@ -8,7 +8,7 @@ import { Pill, Section } from "@/components/diagnosis/primitives";
 import { Chips, EmptyLine } from "@/components/brand-profile/parts";
 import { activeItems, type RankedItem } from "@/lib/brand-profile";
 import {
-  AUDIT_LABEL, KIND_LABEL, RELATION_TABLE, TYPE_LABEL, brainUpdatedSinceReview, territoryReadiness,
+  AUDIT_LABEL, RELATION_TABLE, TYPE_LABEL, brainUpdatedSinceReview, territoryReadiness,
   type StrategicTerritory, type TerritoryAuditEvent, type TerritoryRelation, type TerritoryRelationKind,
 } from "@/lib/territories";
 import { PriorityPill, TerritoryDialog, useTerritoryMutate } from "@/components/territories/shared";
@@ -169,7 +169,6 @@ const TerritoryPage = () => {
           <li key={i.key} className="flex items-center gap-2">{i.connected ? <Check className="h-4 w-4 text-success" /> : <X className="h-4 w-4 text-muted-foreground" />}<span className={i.connected ? "" : "text-muted-foreground"}>{i.label}</span></li>
         ))}</ul>
         <p className="text-sm font-medium">{readiness.label}</p>
-        <p className="text-xs text-muted-foreground">Tipos: {Object.entries(KIND_LABEL).map(([, v]) => v).join(", ")}.</p>
       </Section>
 
       <TerritoryDialog full open={editOpen} onOpenChange={setEditOpen} initial={t} busy={busy}

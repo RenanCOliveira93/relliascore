@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import VideoBackground from "@/components/VideoBackground";
+import { TerritoriesSection } from "@/components/territories/TerritoriesSection";
 import { Pill, Section } from "@/components/diagnosis/primitives";
 import { AddButton, Chips, EmptyLine, ItemEditor, KnowledgeCard, StatusPill, type ItemActions } from "@/components/brand-profile/parts";
 import {
@@ -161,14 +162,15 @@ const BrandProfile = () => {
 
   if (loading && !view) return shell(<p className="text-muted-foreground">Carregando...</p>);
   if (!empresa) return shell(<Section title="Empresa não encontrada"><EmptyLine>Esta empresa não pertence ao espaço atual.</EmptyLine></Section>);
-  if (!view || !derived) return shell(
+  if (!view || !derived) return shell(<>
     <section data-testid="brand-empty" className="rounded-xl border border-border bg-card/70 backdrop-blur-md p-8 text-center space-y-4">
       <Brain className="h-10 w-10 mx-auto text-muted-foreground" />
       <h1 className="text-xl font-semibold">{empresa.nome}</h1>
       <p className="text-muted-foreground">A RELLIA ainda não construiu o perfil desta marca.</p>
       <Button onClick={() => navigate(`/home?tab=brand&empresa=${empresa.id}`)}><Scan className="h-4 w-4 mr-2" />Analisar marca</Button>
     </section>
-  );
+    <TerritoriesSection empresaId={empresa.id} hasBrain={false} />
+  </>);
 
   const { brain, readOnly } = view;
   const pf = (f: OverrideField) => preferredField(brain, view.overrides, f);
@@ -246,6 +248,8 @@ const BrandProfile = () => {
       <Section id="overview" title="Visão geral da marca">
         <div>{SUMMARY_FIELDS.map(summaryRow)}</div>
       </Section>
+
+      {!readOnly && <TerritoriesSection empresaId={empresa.id} hasBrain />}
 
       <Section id="positioning" title="Posicionamento" aside={addBtn("brand_positioning", "Definir como a marca se define")}>
         <div className="grid gap-4 md:grid-cols-2">
