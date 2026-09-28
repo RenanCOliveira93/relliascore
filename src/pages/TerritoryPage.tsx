@@ -9,7 +9,7 @@ import { Chips, EmptyLine } from "@/components/brand-profile/parts";
 import { activeItems, type RankedItem } from "@/lib/brand-profile";
 import {
   AUDIT_LABEL, RELATION_TABLE, TYPE_LABEL, brainUpdatedSinceReview, territoryReadiness,
-  type StrategicTerritory, type TerritoryAuditEvent, type TerritoryRelation, type TerritoryRelationKind,
+  type RelationMatch, type StrategicTerritory, type TerritoryAuditEvent, type TerritoryRelation, type TerritoryRelationKind,
 } from "@/lib/territories";
 import { PriorityPill, TerritoryDialog, useTerritoryMutate } from "@/components/territories/shared";
 
@@ -40,6 +40,8 @@ const TerritoryPage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [adding, setAdding] = useState<TerritoryRelationKind | null>(null);
   const [showAudit, setShowAudit] = useState(false);
+  const [review, setReview] = useState<RelationMatch[] | null>(null);
+  const [choice, setChoice] = useState<Record<string, "update" | "keep" | "remove">>({});
 
   const load = useCallback(async () => {
     if (!empresaId || !territoryId) return;
@@ -104,6 +106,46 @@ const TerritoryPage = () => {
           <div data-testid="brain-updated" className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm flex flex-wrap items-center justify-between gap-2">
             <span>Brand Brain atualizado (v{brain?.version}) desde a última revisão deste território (v{t.last_reviewed_brand_brain_version}). Nada foi alterado automaticamente.</span>
             <Button size="sm" variant="outline" onClick={() => call({ action: "mark_reviewed", territory_id: t.id }, "Revisão registrada")}><RefreshCw className="h-3.5 w-3.5 mr-1" />Marcar como revisado</Button>
+          </div>
+        )}
+        {brain && !archived && rels.some((x) => x.brand_brain_version < brain.version) && (
+          <div data-testid="review-connections" className="rounded-lg border border-border bg-background/40 px-3 py-2 text-sm space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>{rels.filter((x) => x.brand_brain_version < brain.version).length} conexão(ões) vêm de uma versão anterior do Brand Profile.</span>
+              <Button size="sm" variant="outline" disabled={busy} onClick={async () => {
+                const r = await call({ action: "review_connections", territory_id: t.id });
+                const m = ((r.data as { matches?: RelationMatch[] } | undefined)?.matches ?? []);
+                setReview(m); setChoice(Object.fromEntries(m.map((x) => [x.relation_id, x.candidate && !x.requires_review ? "update" : "keep"])));
+              }}><RefreshCw className="h-3.5 w-3.5 mr-1" />Revisar conexões</Button>
+            </div>
+            {review && (review.length === 0 ? <p className="text-xs text-muted-foreground">Nenhuma conexão para revisar.</p> : (
+              <div className="space-y-2">
+                {review.map((m) => (
+                  <div key={m.relation_id} className="rounded-md border border-border/60 p-2 text-xs space-y-1">
+                    <p><span className="text-muted-foreground">Atual (v{m.old_version}):</span> {m.old_label}</p>
+                    <p><span className="text-muted-foreground">Correspondente na versão atual:</span> {m.candidate ? m.candidate.label : "nenhum encontrado"}
+                      {m.candidate && <> · <Pill tone={m.requires_review ? "attention" : "positive"}>{m.match === "carried" ? "mesmo item" : m.match === "exact" ? "mesmo texto" : "aproximado — revise"}</Pill></>}</p>
+                    <div className="flex gap-1.5">
+                      {(["update", "keep", "remove"] as const).filter((c) => c !== "update" || m.candidate).map((c) => (
+                        <Button key={c} size="sm" className="h-7" variant={choice[m.relation_id] === c ? "default" : "outline"} onClick={() => setChoice({ ...choice, [m.relation_id]: c })}>
+                          {c === "update" ? "Atualizar" : c === "keep" ? "Manter" : "Remover"}</Button>))}
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => setReview(null)}>Cancelar</Button>
+                  <Button size="sm" disabled={busy} onClick={async () => {
+                    const upd = review.filter((m) => choice[m.relation_id] === "update" && m.candidate).map((m) => ({ relation_id: m.relation_id, new_item_id: m.candidate!.id }));
+                    const rem = review.filter((m) => choice[m.relation_id] === "remove");
+                    if (!upd.length && !rem.length) { setReview(null); return; }
+                    if (!window.confirm(`Aplicar ${upd.length} atualização(ões) e ${rem.length} remoção(ões)? As alterações ficam no histórico.`)) return;
+                    if (upd.length) await call({ action: "migrate_relations", territory_id: t.id, migrations: upd });
+                    for (const m of rem) await call({ action: "relation_remove", territory_id: t.id, relation_id: m.relation_id });
+                    setReview(null); await load();
+                  }}>Aplicar escolhas</Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
         {!brain && <p className="text-xs text-muted-foreground">Esta empresa ainda não tem Brand Brain: o território existe, mas conexões com produtos, claims e evidências ficam disponíveis após a análise de marca.</p>}

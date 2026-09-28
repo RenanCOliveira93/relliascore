@@ -3,6 +3,7 @@
 // Raw pasted text is never stored (inputType "text" keeps website_url null and has no content column).
 import { v2AnaliseColumns } from "./score-v2.ts";
 import { brandAnaliseColumns } from "./brand-alignment.ts";
+import { territoryAnaliseColumns } from "./territory-alignment.ts";
 
 export interface PersistContext {
   userId: string;
@@ -47,5 +48,6 @@ export function buildAnaliseRow(data: Record<string, any>, ctx: PersistContext):
     current_vs_ideal: data.compatibility_diagnostic && typeof data.compatibility_diagnostic === "object" ? data.compatibility_diagnostic : null,
     ...v2AnaliseColumns(data),
     ...brandAnaliseColumns(data),
+    ...territoryAnaliseColumns(data),
   };
 }

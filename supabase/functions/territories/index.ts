@@ -6,7 +6,7 @@ import { adminClient, authenticate, checkRateLimits, createLogger, jsonResponse,
 import { activeItems, type RankedItem } from "../_shared/brand-precedence.ts";
 import { extractToolArguments } from "../_shared/model-parse.ts";
 import {
-  parseTerritoryAction, slugify, RELATION_KINDS, RELATION_TABLE, sanitizeSuggestions, TERRITORY_BREADTHS, TERRITORY_TYPES,
+  matchOutdatedRelations, parseTerritoryAction, slugify, type ReviewCatalogItem, RELATION_KINDS, RELATION_TABLE, sanitizeSuggestions, TERRITORY_BREADTHS, TERRITORY_TYPES,
   type BrainCatalogItem, type TerritoryAction, type TerritoryRelationKind,
 } from "../_shared/territories.ts";
 
@@ -64,9 +64,9 @@ serve(async (req) => {
       .eq("empresa_id", emp.id).eq("user_id", userId).eq("workspace_id", emp.workspace_id).eq("is_active", true).maybeSingle();
     return data;
   };
-  const catalog = async (brainId: string): Promise<BrainCatalogItem[]> => {
+  const catalog = async (brainId: string): Promise<ReviewCatalogItem[]> => {
     const lists = await Promise.all(RELATION_KINDS.map((k) => admin.from(RELATION_TABLE[k]).select("*").eq("brand_brain_id", brainId).then((r: { data: Row[] | null }) => r.data ?? [])));
-    return RELATION_KINDS.flatMap((k, i) => activeItems(lists[i] as unknown as RankedItem[]).map((r) => ({ kind: k, id: (r as unknown as Row).id, label: labelOf(k, r as unknown as Row) })));
+    return RELATION_KINDS.flatMap((k, i) => activeItems(lists[i] as unknown as RankedItem[]).map((r) => ({ kind: k, id: (r as unknown as Row).id, label: labelOf(k, r as unknown as Row), carried_from_id: (r as unknown as Row).carried_from_id ?? null })));
   };
   const audit = (action: string, targetId: string | null, oldValue: unknown, newValue: unknown, brainId: string | null = null) =>
     admin.from("brand_audit_log").insert({ workspace_id: emp.workspace_id, empresa_id: emp.id, brand_brain_id: brainId, user_id: userId, action: `territory_${action}`, target_table: "brand_territories", target_id: targetId, old_value: oldValue, new_value: newValue, request_id: requestId });
@@ -173,6 +173,39 @@ serve(async (req) => {
         if (!data) return respond(404, { error: "Relação não encontrada." });
         await audit("relation_removed", territory!.id, { relation_id: data.id, kind: data.relation_kind, item_id: data.item_id, label: data.item_label }, null, data.brand_brain_id);
         return respond(200, { ok: true });
+      }
+      case "review_connections": {
+        const brain = await activeBrain();
+        if (!brain) return respond(200, { ok: true, matches: [], brand_brain: null });
+        const { data: rels } = await admin.from("brand_territory_relations").select("id, relation_kind, item_id, item_label, brand_brain_version").eq("territory_id", territory!.id);
+        const matches = matchOutdatedRelations((rels ?? []) as never, brain.version, await catalog(brain.id));
+        log("review_connections", { territory_id: territory!.id, outdated: matches.length });
+        return respond(200, { ok: true, matches, brand_brain: { id: brain.id, version: brain.version } });
+      }
+      case "migrate_relations": {
+        const t = territory!;
+        if (t.status === "archived") return respond(409, { error: "Restaure o território antes de editar." });
+        const brain = await activeBrain();
+        if (!brain) return respond(409, { error: "Esta empresa ainda não tem Brand Brain." });
+        let migrated = 0;
+        for (const m of a.migrations) {
+          const { data: rel } = await admin.from("brand_territory_relations").select("*").eq("id", m.relation_id).eq("territory_id", t.id).maybeSingle();
+          if (!rel) return respond(404, { error: "Relação não encontrada." });
+          // New item must be in the ACTIVE Brand Brain of this empresa and of the same kind (never trust a raw ID).
+          const { data: item } = await admin.from(RELATION_TABLE[rel.relation_kind as TerritoryRelationKind]).select("*").eq("id", m.new_item_id).eq("brand_brain_id", brain.id).maybeSingle();
+          if (!item) return respond(404, { error: "Item não encontrado no Brand Brain ativo." });
+          const label = labelOf(rel.relation_kind, item);
+          const { data: dup } = await admin.from("brand_territory_relations").select("id").eq("territory_id", t.id).eq("relation_kind", rel.relation_kind).eq("item_id", m.new_item_id).maybeSingle();
+          if (dup) { const { error } = await admin.from("brand_territory_relations").delete().eq("id", rel.id); if (error) throw error; }
+          else {
+            const { error } = await admin.from("brand_territory_relations").update({ item_id: m.new_item_id, brand_brain_id: brain.id, brand_brain_version: brain.version, item_label: label }).eq("id", rel.id);
+            if (error) throw error;
+          }
+          await audit("relation_migrated", t.id, { relation_id: rel.id, kind: rel.relation_kind, old_id: rel.item_id, old_label: rel.item_label, old_version: rel.brand_brain_version },
+            { relation_id: dup?.id ?? rel.id, new_id: m.new_item_id, new_label: label, new_version: brain.version, merged_into_existing: !!dup }, brain.id);
+          migrated++;
+        }
+        return respond(200, { ok: true, migrated });
       }
       case "suggest": {
         const brain = await activeBrain();

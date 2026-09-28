@@ -53,7 +53,7 @@ export interface TerritorySuggestion {
 export interface ReadinessItem { key: TerritoryRelationKind; label: string; connected: boolean }
 export interface TerritoryReadiness { items: ReadinessItem[]; connected: number; total: number; label: string }
 
-export type TerritoryAuditAction = "created" | "edited" | "priority_changed" | "archived" | "restored" | "relation_added" | "relation_removed" | "suggestion_accepted" | "reviewed";
+export type TerritoryAuditAction = "created" | "edited" | "priority_changed" | "archived" | "restored" | "relation_added" | "relation_removed" | "suggestion_accepted" | "reviewed" | "relation_migrated";
 export interface TerritoryAuditEvent {
   id: string; action: TerritoryAuditAction; user_id: string; created_at: string;
   target_id: string | null; old_value: unknown; new_value: unknown;
@@ -123,6 +123,8 @@ export type TerritoryAction =
   | { action: "relation_add"; territory_id: string; kind: TerritoryRelationKind; item_id: string }
   | { action: "relation_remove"; territory_id: string; relation_id: string }
   | { action: "suggest"; empresa_id: string }
+  | { action: "review_connections"; territory_id: string }
+  | { action: "migrate_relations"; territory_id: string; migrations: RelationMigration[] }
   | { action: "accept_suggestion"; empresa_id: string; suggestion: TerritorySuggestion; priority: TerritoryPriority; replace_primary: boolean };
 
 export function parseTerritoryAction(body: unknown): Valid<TerritoryAction> {
@@ -151,6 +153,16 @@ export function parseTerritoryAction(body: unknown): Valid<TerritoryAction> {
     case "relation_remove":
       if (!isUuid(b.territory_id) || !isUuid(b.relation_id)) return { ok: false, error: "Relação inválida." };
       return { ok: true, value: { action: "relation_remove", territory_id: b.territory_id, relation_id: b.relation_id } };
+    case "review_connections":
+      if (!isUuid(b.territory_id)) return { ok: false, error: "Território inválido." };
+      return { ok: true, value: { action: "review_connections", territory_id: b.territory_id } };
+    case "migrate_relations": {
+      if (!isUuid(b.territory_id)) return { ok: false, error: "Território inválido." };
+      if (b.confirm !== true) return { ok: false, error: "Confirmação explícita obrigatória." };
+      const migrations = parseMigrations(b.migrations);
+      if (!migrations) return { ok: false, error: "Atualizações inválidas." };
+      return { ok: true, value: { action: "migrate_relations", territory_id: b.territory_id, migrations } };
+    }
     case "suggest":
       if (!isUuid(b.empresa_id)) return { ok: false, error: "Empresa inválida." };
       return { ok: true, value: { action: "suggest", empresa_id: b.empresa_id } };
@@ -237,4 +249,54 @@ export function brainUpdatedSinceReview(t: Pick<StrategicTerritory, "last_review
 export const PRIORITY_ORDER: Record<TerritoryPriority, number> = { primary: 0, secondary: 1, exploratory: 2 };
 export function sortTerritories<T extends Pick<StrategicTerritory, "priority" | "created_at" | "status">>(list: T[]): T[] {
   return [...list].sort((a, b) => (a.status === "archived" ? 1 : 0) - (b.status === "archived" ? 1 : 0) || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.created_at.localeCompare(b.created_at));
+}
+
+// ---------- Revisar conexões (04B): match outdated relations to the active Brand Brain — suggestions only ----------
+export interface ReviewCatalogItem extends BrainCatalogItem { carried_from_id?: string | null }
+export type MatchKind = "carried" | "exact" | "approximate" | "none";
+export interface RelationMatch {
+  relation_id: string; kind: TerritoryRelationKind; old_item_id: string; old_label: string; old_version: number;
+  match: MatchKind; confidence: number; candidate: { id: string; label: string } | null; requires_review: boolean;
+}
+const nk = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const toks = (s: string) => new Set(nk(s).split(" ").filter((w) => w.length > 2));
+export function labelSimilarity(a: string, b: string): number {
+  const A = toks(a), B = toks(b); if (!A.size || !B.size) return 0;
+  let i = 0; for (const t of A) if (B.has(t)) i++;
+  return i / (A.size + B.size - i);
+}
+
+/**
+ * For each relation defined on an older Brand Brain version, proposes the best candidate in the active version.
+ * carried (the new row was carried from the old one) and exact normalized name are high confidence; approximate
+ * matches always require review. Nothing is migrated here — the user confirms explicitly.
+ */
+export function matchOutdatedRelations(
+  relations: Pick<TerritoryRelation, "id" | "relation_kind" | "item_id" | "item_label" | "brand_brain_version">[],
+  activeVersion: number, catalog: ReviewCatalogItem[], minApprox = 0.5,
+): RelationMatch[] {
+  return relations.filter((r) => r.brand_brain_version < activeVersion).map((r) => {
+    const base = { relation_id: r.id, kind: r.relation_kind, old_item_id: r.item_id, old_label: r.item_label, old_version: r.brand_brain_version };
+    const same = catalog.filter((c) => c.kind === r.relation_kind);
+    const carried = same.find((c) => c.carried_from_id === r.item_id || c.id === r.item_id);
+    if (carried) return { ...base, match: "carried" as const, confidence: 0.98, candidate: { id: carried.id, label: carried.label }, requires_review: false };
+    const exact = same.find((c) => nk(c.label) === nk(r.item_label));
+    if (exact) return { ...base, match: "exact" as const, confidence: 0.9, candidate: { id: exact.id, label: exact.label }, requires_review: false };
+    let best: ReviewCatalogItem | null = null; let bs = 0;
+    for (const c of same) { const sc = labelSimilarity(c.label, r.item_label); if (sc > bs) { bs = sc; best = c; } }
+    if (best && bs >= minApprox) return { ...base, match: "approximate" as const, confidence: Math.round(bs * 0.8 * 100) / 100, candidate: { id: best.id, label: best.label }, requires_review: true };
+    return { ...base, match: "none" as const, confidence: 0, candidate: null, requires_review: true };
+  });
+}
+
+export interface RelationMigration { relation_id: string; new_item_id: string }
+export function parseMigrations(v: unknown): RelationMigration[] | null {
+  if (!Array.isArray(v) || v.length === 0 || v.length > 50) return null;
+  const out: RelationMigration[] = [];
+  for (const m of v) {
+    const o = m as Record<string, unknown>;
+    if (!isUuid(o?.relation_id) || !isUuid(o?.new_item_id)) return null;
+    out.push({ relation_id: o.relation_id, new_item_id: o.new_item_id });
+  }
+  return out;
 }

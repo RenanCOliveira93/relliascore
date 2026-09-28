@@ -17,6 +17,8 @@ import CompatibilityDiagnostic from "@/components/CompatibilityDiagnostic";
 import { missingSnapshotParts } from "@/lib/diagnosis";
 import { Bar, Confidence, Help, Pill, Section, TONE_TEXT } from "./primitives";
 import BrandAlignmentSection from "./BrandAlignmentSection";
+import TerritoryAlignmentSection from "./TerritoryAlignmentSection";
+import { interpretTerritory, isTerritoryAware, TERRITORY_ALIGNMENT_TOOLTIP } from "@/lib/territory-alignment-view";
 import { BRAND_ALIGNMENT_TOOLTIP, CONTENT_SCORE_TOOLTIP, interpretScores, isBrandAware } from "@/lib/brand-alignment-view";
 
 export interface DiagnosisContext { source?: string; query?: string; inputType?: "webpage" | "text" }
@@ -80,6 +82,10 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
   const brandAware = isBrandAware(r);
   const brandScore = brandAware && typeof r.brand_alignment_score === "number" ? Math.round(r.brand_alignment_score) : null;
   const brandOptimized = sanitizeOptimized(r.brand_optimized_version ?? undefined);
+  const territoryAware = isTerritoryAware(r);
+  const territoryScore = territoryAware && typeof r.territory_alignment_score === "number" ? Math.round(r.territory_alignment_score) : null;
+  const territoryOptimized = sanitizeOptimized(r.territory_optimized_version ?? undefined);
+  const nCards = 1 + (brandAware ? 1 : 0) + (territoryAware ? 1 : 0);
 
   const copy = async () => {
     await navigator.clipboard.writeText(optimized);
@@ -96,7 +102,7 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
       <section className="rounded-xl border border-border bg-card/80 backdrop-blur-md p-6 sm:p-8">
         <div className="grid gap-6 md:grid-cols-[auto,1fr] md:items-center">
           <div className="text-center md:text-left md:pr-8 md:border-r md:border-border">
-            <div className={brandAware ? "grid grid-cols-1 sm:grid-cols-2 gap-6" : ""} data-testid="score-pair">
+            <div className={nCards === 3 ? "grid grid-cols-1 sm:grid-cols-3 gap-6" : nCards === 2 ? "grid grid-cols-1 sm:grid-cols-2 gap-6" : ""} data-testid="score-pair">
               <div>
                 <p className="inline-flex items-center gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">{brandAware ? "Content Score" : "RELLIA Content Score"}</span><Help text={brandAware ? `${CONTENT_SCORE_TOOLTIP} ${SCORE_HELP}` : SCORE_HELP} /></p>
                 <p className={`text-7xl sm:text-8xl font-bold tabular-nums leading-none mt-2 ${TONE_TEXT[tone]}`}>{animated}</p>
@@ -107,12 +113,20 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
                   <p className={`text-7xl sm:text-8xl font-bold tabular-nums leading-none mt-2 ${brandScore === null ? TONE_TEXT.neutral : TONE_TEXT[toneOf(brandScore)]}`}>{brandScore ?? "N/D"}</p>
                 </div>
               )}
+              {territoryAware && (
+                <div data-testid="territory-alignment-score">
+                  <p className="inline-flex items-center gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">Territory Alignment</span><Help text={TERRITORY_ALIGNMENT_TOOLTIP} /></p>
+                  <p className={`${nCards === 3 ? "text-6xl sm:text-7xl" : "text-7xl sm:text-8xl"} font-bold tabular-nums leading-none mt-2 ${territoryScore === null ? TONE_TEXT.neutral : TONE_TEXT[toneOf(territoryScore)]}`}>{territoryScore ?? "N/D"}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 truncate">{r.territory_snapshot!.territory_name}</p>
+                </div>
+              )}
             </div>
             <div className="mt-3 flex flex-wrap justify-center md:justify-start gap-2">
               <Pill>Score 2.0</Pill>
               {isText && <Pill>Análise de conteúdo</Pill>}
               {r.content_score_partial && <span className="inline-flex items-center gap-1"><Pill>Score parcial</Pill><Help text={PARTIAL_HELP} /></span>}
               {brandAware && r.brand_alignment_partial && <Pill>Brand Alignment parcial</Pill>}
+              {territoryAware && r.territory_alignment_partial && <Pill>Territory Alignment parcial</Pill>}
             </div>
           </div>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -127,6 +141,7 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
             )}
             {!brandAware && r.brand_context_status === "no_brand_brain" && <p className="sm:col-span-2 text-xs text-muted-foreground">Empresa sem Brand Profile: análise feita sem contexto de marca.</p>}
             {!brandAware && r.brand_context_status === "failed" && <p className="sm:col-span-2 text-xs text-muted-foreground">Não foi possível avaliar o alinhamento com a marca desta vez. O Content Score não foi afetado.</p>}
+            {r.territory_status === "failed" && <p className="sm:col-span-2 text-xs text-muted-foreground">Não foi possível avaliar a contribuição para o território desta vez. Os outros scores não foram afetados.</p>}
             {r.technical_geo && <div><dt className="text-xs text-muted-foreground">Tipo de página</dt><dd>{pageTypeLabel(r.technical_geo.page_type.page_type)}</dd></div>}
             {r.technical_geo && <div><dt className="text-xs text-muted-foreground">Technical GEO Coverage</dt><dd className="text-muted-foreground">{Math.round(r.technical_geo.coverage * 100)}%</dd></div>}
           </dl>
@@ -192,6 +207,8 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
       </Section>
 
       {brandAware && <BrandAlignmentSection r={r} />}
+      {territoryAware && interpretTerritory(score, brandScore, territoryScore) && <p className="text-sm text-muted-foreground px-1" data-testid="territory-interpretation">{interpretTerritory(score, brandScore, territoryScore)}</p>}
+      {territoryAware && <TerritoryAlignmentSection r={r} />}
 
       {/* 4. Prioridades */}
       <Section title="O que corrigir primeiro" lead={priorities.length ? `As ${priorities.length} ações com maior prioridade.` : undefined}>
@@ -361,6 +378,17 @@ const DiagnosisView = ({ result: r, context = {} }: { result: AnalysisResult; co
               <p className="text-xs text-muted-foreground">Usa o posicionamento, produtos, diferenciais, claims e voz registrados no Brand Profile (v{r.brand_context_snapshot?.brand_brain_version}). Não adiciona números, clientes, cases ou resultados que não estejam no conteúdo ou no perfil.{!isText && " Use como exemplo de melhoria, não como substituição integral da página."}</p>
               <div className="flex justify-end"><Button size="sm" variant="outline" onClick={async () => { await navigator.clipboard.writeText(brandOptimized); toast.success("Texto copiado"); }} className="gap-2"><Copy className="h-4 w-4" />Copiar</Button></div>
               <div className="rounded-lg border border-border bg-background/40 p-4"><p className="text-sm leading-relaxed whitespace-pre-wrap">{brandOptimized}</p></div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {territoryOptimized && (
+          <AccordionItem value="territory-optimized" className="rounded-xl border border-border bg-card/70 px-5">
+            <AccordionTrigger className="text-left">Ver versão otimizada para o território</AccordionTrigger>
+            <AccordionContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">Aproxima o conteúdo do território "{r.territory_snapshot?.territory_name}" sem inventar números, clientes ou resultados.</p>
+              <div className="flex justify-end"><Button size="sm" variant="outline" onClick={async () => { await navigator.clipboard.writeText(territoryOptimized); toast.success("Texto copiado"); }} className="gap-2"><Copy className="h-4 w-4" />Copiar</Button></div>
+              <div className="rounded-lg border border-border bg-background/40 p-4"><p className="text-sm leading-relaxed whitespace-pre-wrap">{territoryOptimized}</p></div>
             </AccordionContent>
           </AccordionItem>
         )}

@@ -74,7 +74,18 @@ export type Database = {
           technical_geo_rules: Json | null
           technical_geo_version: string | null
           technical_signals: Json | null
+          territory_alignment_dimensions: Json | null
+          territory_alignment_partial: boolean | null
+          territory_alignment_score: number | null
+          territory_alignment_version: string | null
+          territory_alignment_weights_applied: Json | null
+          territory_findings: Json | null
+          territory_gaps: Json | null
           territory_id: string | null
+          territory_next_actions: Json | null
+          territory_optimized_version: string | null
+          territory_snapshot: Json | null
+          territory_strengths: Json | null
           tipo: string
           user_id: string
           website_url: string | null
@@ -140,7 +151,18 @@ export type Database = {
           technical_geo_rules?: Json | null
           technical_geo_version?: string | null
           technical_signals?: Json | null
+          territory_alignment_dimensions?: Json | null
+          territory_alignment_partial?: boolean | null
+          territory_alignment_score?: number | null
+          territory_alignment_version?: string | null
+          territory_alignment_weights_applied?: Json | null
+          territory_findings?: Json | null
+          territory_gaps?: Json | null
           territory_id?: string | null
+          territory_next_actions?: Json | null
+          territory_optimized_version?: string | null
+          territory_snapshot?: Json | null
+          territory_strengths?: Json | null
           tipo: string
           user_id: string
           website_url?: string | null
@@ -206,7 +228,18 @@ export type Database = {
           technical_geo_rules?: Json | null
           technical_geo_version?: string | null
           technical_signals?: Json | null
+          territory_alignment_dimensions?: Json | null
+          territory_alignment_partial?: boolean | null
+          territory_alignment_score?: number | null
+          territory_alignment_version?: string | null
+          territory_alignment_weights_applied?: Json | null
+          territory_findings?: Json | null
+          territory_gaps?: Json | null
           territory_id?: string | null
+          territory_next_actions?: Json | null
+          territory_optimized_version?: string | null
+          territory_snapshot?: Json | null
+          territory_strengths?: Json | null
           tipo?: string
           user_id?: string
           website_url?: string | null

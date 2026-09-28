@@ -1,3 +1,4 @@
+import { isTerritoryAware, PRIORITY_SHORT, TA_GAP_LABEL, TA_LABELS, TA_ORDER, topicTexts } from "./territory-alignment-view";
 import jsPDF from "jspdf";
 import { DIMENSION_LABELS, type AnalysisResult, type CitationKey, type EntityClarityKey } from "@/types/analysis";
 import {
@@ -91,6 +92,28 @@ export function buildAnalysisPdfV2(r: AnalysisResult, source: string, query: str
     if (r.brand_strengths?.length) { body("O que o conteúdo reforça", 10, COLORS.dark, "bold"); r.brand_strengths.slice(0, 5).forEach((x) => bullet(x.statement)); }
     if (r.brand_gaps?.length) { body("Lacunas de marca", 10, COLORS.dark, "bold"); r.brand_gaps.slice(0, 5).forEach((x) => bullet(`${GAP_TYPE_LABEL[x.gap_type]}: ${x.statement}`)); }
     if (r.brand_recommendations?.length) { body("Recomendações de marca", 10, COLORS.dark, "bold"); r.brand_recommendations.slice(0, 5).forEach((x) => bullet(x.text)); }
+    y += 4;
+  }
+
+  if (isTerritoryAware(r)) {
+    const ts = r.territory_snapshot!;
+    title("Contribuição para o Território");
+    const tsc = typeof r.territory_alignment_score === "number" ? Math.round(r.territory_alignment_score) : null;
+    body(`Territory Alignment: ${tsc ?? "N/D"}/100${r.territory_alignment_partial ? " (parcial)" : ""} - ${ts.territory_name} (${PRIORITY_SHORT[ts.priority]})`, 11, COLORS.dark, "bold");
+    if (ts.strategic_intent) body(`Intenção estratégica: ${ts.strategic_intent}`, 9);
+    if (ts.desired_association) body(`Associação desejada: ${ts.desired_association}`, 9);
+    body("Mede a contribuição do conteúdo para o território selecionado. Independente do Content Score e do Brand Alignment; não mede presença real em respostas de IA.", 8, COLORS.muted, "italic");
+    for (const k of TA_ORDER) {
+      const d = r.territory_alignment_dimensions?.[k];
+      body(`${TA_LABELS[k]}: ${d?.available && d.score !== null ? `${Math.round(d.score)} (peso ${pct(r.territory_alignment_weights_applied?.[k] ?? null)})` : "N/D - fora do cálculo"}`, 10, COLORS.dark, "bold");
+      if (d?.reason) body(d.reason, 9, COLORS.muted);
+    }
+    const cov = r.territory_topic_coverage;
+    if (cov?.topics_present.length) body(`Subtópicos presentes: ${topicTexts(cov.topics_present, ts).join(", ")}`, 9);
+    if (cov?.relevant_topics_missing.length) body(`Subtópicos relevantes ausentes: ${topicTexts(cov.relevant_topics_missing, ts).join(", ")}`, 9);
+    if (r.territory_strengths?.length) { body("O que o conteúdo já reforça", 10, COLORS.dark, "bold"); r.territory_strengths.slice(0, 5).forEach((x) => bullet(x.statement)); }
+    if (r.territory_gaps?.length) { body("Lacunas territoriais", 10, COLORS.dark, "bold"); r.territory_gaps.slice(0, 5).forEach((x) => bullet(`${TA_GAP_LABEL[x.gap_type] ?? x.gap_type}: ${x.statement}`)); }
+    if (r.territory_next_actions?.length) { body("Próximas ações", 10, COLORS.dark, "bold"); r.territory_next_actions.slice(0, 5).forEach((x) => bullet(x.text)); }
     y += 4;
   }
 
