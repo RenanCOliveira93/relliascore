@@ -83,6 +83,15 @@ const Index = () => {
     supabase.from("brand_brains").select("version").eq("empresa_id", relEmpresaId).eq("is_active", true).maybeSingle()
       .then(({ data }) => setRelBrain(data ? { version: data.version } : null));
   }, [relEmpresaId]);
+  // 04B: optional strategic territory of the selected empresa (server re-verifies ownership; archived rejected).
+  const [relTerritories, setRelTerritories] = useState<{ id: string; name: string; priority: string }[]>([]);
+  const [relTerritoryId, setRelTerritoryId] = useState<string | null>(null);
+  useEffect(() => {
+    setRelTerritoryId(null); setRelTerritories([]);
+    if (!relEmpresaId) return;
+    supabase.from("brand_territories").select("id,name,priority").eq("empresa_id", relEmpresaId).eq("status", "active").order("priority")
+      .then(({ data }) => setRelTerritories((data ?? []) as { id: string; name: string; priority: string }[]));
+  }, [relEmpresaId]);
   const { planConfig, canAnalyze, remainingAnalyses, subscription, refreshSubscription } = useSubscription();
 
   const handleAnalyze = async () => {
@@ -114,7 +123,7 @@ const Index = () => {
       try {
         if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null, empresaId: relEmpresaId, clientRequestId: crypto.randomUUID() }
+          body: { websiteUrl: formattedUrl, searchQuery: searchQuery.trim(), mode, inputType: "webpage", workspaceId: activeWorkspace?.id ?? null, empresaId: relEmpresaId, territoryId: relTerritoryId, clientRequestId: crypto.randomUUID() }
         });
         if (error) {
           const f = await readFunctionError(error);
@@ -143,7 +152,7 @@ const Index = () => {
       try {
         if (!canAnalyze) throw new Error("Limite de análises atingido.");
         const { data, error } = await supabase.functions.invoke('analyze-relevance', {
-          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null, empresaId: relEmpresaId, clientRequestId: crypto.randomUUID() }
+          body: { content: textContent.trim(), searchQuery: searchQuery.trim(), mode, inputType: "text", workspaceId: activeWorkspace?.id ?? null, empresaId: relEmpresaId, territoryId: relTerritoryId, clientRequestId: crypto.randomUUID() }
         });
         if (error) {
           const f = await readFunctionError(error);
@@ -376,6 +385,14 @@ const Index = () => {
                         </select>
                         {!relEmpresaId && <p className="text-xs text-muted-foreground">Selecione uma empresa para avaliar também o alinhamento com a marca.</p>}
                         {relEmpresaId && relBrain && <p className="text-xs text-success">Modo Brand-aware · Brand Brain v{relBrain.version}</p>}
+                        {relEmpresaId && relTerritories.length > 0 && (
+                          <select aria-label="Território estratégico (opcional)" className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                            value={relTerritoryId ?? ""} onChange={(e) => setRelTerritoryId(e.target.value || null)}>
+                            <option value="">Sem território (opcional)</option>
+                            {relTerritories.map((t) => <option key={t.id} value={t.id}>{t.name}{t.priority === "primary" ? " · Principal" : t.priority === "secondary" ? " · Secundário" : " · Exploratório"}</option>)}
+                          </select>
+                        )}
+                        {relTerritoryId && <p className="text-xs text-muted-foreground">Também será medida a contribuição deste conteúdo para o território.</p>}
                         {relEmpresaId && relBrain === null && (
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span>Esta empresa ainda não possui Brand Profile. A análise continuará sem contexto de marca.</span>
