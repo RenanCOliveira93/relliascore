@@ -13,6 +13,6 @@ export const KIND_LABEL: Record<TerritoryRelationKind, string> = {
 export const AUDIT_LABEL: Record<string, string> = {
   territory_created: "Criado", territory_edited: "Editado", territory_priority_changed: "Prioridade alterada", territory_archived: "Arquivado",
   territory_restored: "Restaurado", territory_relation_added: "Relação adicionada", territory_relation_removed: "Relação removida",
-  territory_suggestion_accepted: "Sugestão aceita", territory_reviewed: "Conexões revisadas",
+  territory_suggestion_accepted: "Sugestão aceita", territory_reviewed: "Conexões revisadas", territory_relation_migrated: "Conexão atualizada para nova versão",
 };
 export const splitList = (s: string) => s.split(/[\n,;]/).map((x) => x.trim()).filter(Boolean);
