@@ -31,7 +31,7 @@ Deno.test("context: snapshot fields, topic IDs, outdated relation flagged, readi
   assert(c.relations.find((r) => r.id === id(4))!.source_version_outdated);
   assert(!c.relations.find((r) => r.id === id(1))!.source_version_outdated);
   assertEquals(c.relations.find((r) => r.id === id(3))!.detail, "30% menos perdas — Case varejo");
-  assertEquals(c.readiness.label, "3 de 6 fundamentos conectados");
+  assertEquals(c.readiness.label, "4 de 6 fundamentos conectados");
   assertEquals(c.last_reviewed_brand_brain_version, 1);
   const ids = territoryContextIds(c);
   assert(ids.has(id(1)) && ids.has("topic:2") && ids.has("t:intent"));
