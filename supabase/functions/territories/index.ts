@@ -6,7 +6,7 @@ import { adminClient, authenticate, checkRateLimits, createLogger, jsonResponse,
 import { activeItems, type RankedItem } from "../_shared/brand-precedence.ts";
 import { extractToolArguments } from "../_shared/model-parse.ts";
 import {
-  parseTerritoryAction, RELATION_KINDS, RELATION_TABLE, sanitizeSuggestions, TERRITORY_BREADTHS, TERRITORY_TYPES,
+  parseTerritoryAction, slugify, RELATION_KINDS, RELATION_TABLE, sanitizeSuggestions, TERRITORY_BREADTHS, TERRITORY_TYPES,
   type BrainCatalogItem, type TerritoryAction, type TerritoryRelationKind,
 } from "../_shared/territories.ts";
 
@@ -94,7 +94,7 @@ serve(async (req) => {
           const [s] = sanitizeSuggestions({ suggestions: [a.suggestion] }, await catalog(brain.id));
           if (!s) return respond(400, { error: "A sugestão não corresponde ao Brand Brain atual." });
           supporting = s.supporting_brand_items;
-          row = { name: s.name, slug: (await import("../_shared/territories.ts")).slugify(s.name), territory_type: s.type, origin: "brand_brain_suggestion",
+          row = { name: s.name, slug: slugify(s.name), territory_type: s.type, origin: "brand_brain_suggestion",
             source_brand_brain_id: brain.id, source_brand_brain_version: brain.version, suggestion_confidence: s.confidence, suggestion_rationale: s.rationale || null, suggestion_breadth: s.breadth };
         }
         const priority = a.action === "create" ? (a.values.priority ?? "secondary") : a.priority;
@@ -116,7 +116,6 @@ serve(async (req) => {
         if (t.status === "archived") return respond(409, { error: "Restaure o território antes de editar." });
         const { priority, ...rest } = a.values as Row;
         if (priority === "primary" && t.priority !== "primary" && !a.replace_primary) { const p = await currentPrimary(t.id); if (p) return conflict(p); }
-        const before = Object.fromEntries(Object.keys(a.values).map((k) => [k, t[k] ?? null]));
         if (Object.keys(rest).length) {
           const { error } = await admin.from("brand_territories").update(rest).eq("id", t.id);
           if (error) { if (isDup(error)) return respond(409, { error: "Já existe um território ativo com esse nome." }); throw error; }
@@ -127,7 +126,6 @@ serve(async (req) => {
           if (error) throw error;
           await audit("priority_changed", t.id, { priority: t.priority }, { priority, demoted_territory_id: prev ?? null });
         }
-        void before;
         return respond(200, { ok: true });
       }
       case "archive": {
