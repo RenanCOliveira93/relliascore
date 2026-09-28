@@ -132,12 +132,12 @@ export function parseTerritoryAction(body: unknown): Valid<TerritoryAction> {
   switch (b.action) {
     case "create": {
       if (!isUuid(b.empresa_id)) return { ok: false, error: "Empresa inválida." };
-      const v = validateTerritory(b.values); if (!v.ok) return { ok: false, error: v.error };
+      const v = validateTerritory(b.values); if (v.ok === false) return { ok: false, error: v.error };
       return { ok: true, value: { action: "create", empresa_id: b.empresa_id, values: v.value, replace_primary: rp } };
     }
     case "update": {
       if (!isUuid(b.territory_id)) return { ok: false, error: "Território inválido." };
-      const v = validateTerritory(b.values, true); if (!v.ok) return { ok: false, error: v.error };
+      const v = validateTerritory(b.values, true); if (v.ok === false) return { ok: false, error: v.error };
       if (Object.keys(v.value).length === 0) return { ok: false, error: "Nada para alterar." };
       return { ok: true, value: { action: "update", territory_id: b.territory_id, values: v.value, replace_primary: rp } };
     }
