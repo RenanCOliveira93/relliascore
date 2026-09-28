@@ -10,6 +10,8 @@ import { extractToolArguments } from "../_shared/model-parse.ts";
 import { buildV2Scores, buildV2ToolSchema, validateV2Assessment } from "../_shared/score-v2.ts";
 import { buildBrandContext, loadActiveBrandBrain, renderBrandContext, type BrandBrainData } from "../_shared/brand-context.ts";
 import { BRAND_SYSTEM_RULES, BRAND_TOOL_SCHEMA, brandWebhookFields, validateBrandAssessment } from "../_shared/brand-alignment.ts";
+import { buildTerritoryContext, loadTerritory, renderTerritoryContext, type TerritoryData } from "../_shared/territory-context.ts";
+import { TERRITORY_SYSTEM_RULES, TERRITORY_TOOL_SCHEMA, territoryWebhookFields, validateTerritoryAssessment } from "../_shared/territory-alignment.ts";
 import {
   adminClient, authenticate, checkRateLimits, clientIp, createLogger, jsonResponse, privateCors, refundUsage, verifyWorkspace,
 } from "../_shared/http.ts";
@@ -102,6 +104,20 @@ serve(async (req) => {
     brandEmpresaId = loaded.empresa_id;
     if (loaded.status === "ok") { brandData = loaded.data; brandContextStatus = "ok"; } else brandContextStatus = "no_brand_brain";
     log("brand_context_resolved", { empresa_id: brandEmpresaId, brand_aware: !!brandData, brand_brain_id: brandData?.brain.id ?? null, brand_brain_version: brandData?.brain.version ?? null });
+  }
+
+  // Territory Alignment (04B): optional; requires a verified empresa. user → workspace → empresa → ACTIVE territory,
+  // resolved before quota (cross-tenant/archived never consume the plan). Never trusts the browser's territory data.
+  const requestedTerritory = body?.territoryId ?? body?.territory_id ?? null;
+  let territoryData: TerritoryData | null = null;
+  let territoryStatus: "none" | "ok" | "failed" = "none";
+  if (requestedTerritory !== null && requestedTerritory !== undefined && requestedTerritory !== "") {
+    if (!userId || !workspaceId || !brandEmpresaId) { log("territory_forbidden", { reason: "no_empresa" }); return respond(403, { error: "Território não encontrado ou sem permissão." }); }
+    const tl = await loadTerritory(admin, userId, workspaceId, brandEmpresaId, requestedTerritory);
+    if (tl.status === "forbidden") { log("territory_forbidden"); return respond(403, { error: "Território não encontrado ou sem permissão." }); }
+    if (tl.status === "archived") { log("territory_archived"); return respond(409, { error: "Este território está arquivado e não pode ser usado em análises." }); }
+    territoryData = tl.data; territoryStatus = "ok";
+    log("territory_resolved", { empresa_id: brandEmpresaId, territory_id: tl.data.territory.id });
   }
 
   // Plan quota is consumed server-side from the authenticated identity (never a client-sent user id).
@@ -267,6 +283,37 @@ Faça a análise completa usando a função fornecida.`;
     }
   }
 
+  // ---- Territory Alignment (independent 3rd pass; Content Score and Brand Alignment above are untouched) ----
+  let territory: Record<string, unknown> = {};
+  if (territoryData) {
+    const tctx = buildTerritoryContext(territoryData);
+    const t0 = Date.now();
+    log("territory_context_built", { territory_id: tctx.territory_id, brand_brain_id: brandData?.brain.id ?? null, territory_context_items: tctx.relations.length, territory_context_truncated: tctx.selection.truncated });
+    try {
+      const brandCtxText = (brand as any).brand_context_snapshot ? renderBrandContext((brand as any).brand_context_snapshot) : "";
+      const tUser = `=== CONTEXTO DO TERRITÓRIO (IDs entre colchetes) ===\n${renderTerritoryContext(tctx)}\n\n${brandCtxText ? `=== CONTEXTO DA MARCA (apenas para voz, posicionamento e fatos; não cite estes IDs) ===\n${brandCtxText.replace(/\[[^\]]+\]\s*/g, "")}\n\n` : ""}=== INTENÇÃO ANALISADA ===\n"${searchQuery}"\n\n=== CONTEÚDO ===\n${payload.text}\n\nAvalie a contribuição para o território usando a função.`;
+      const tRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [{ role: "system", content: `${TERRITORY_SYSTEM_RULES}\n${modeContext}` }, { role: "user", content: tUser }],
+          tools: [{ type: "function", function: { name: "deliver_territory_alignment", description: "Structured territory alignment assessment", parameters: TERRITORY_TOOL_SCHEMA } }],
+          tool_choice: { type: "function", function: { name: "deliver_territory_alignment" } },
+        }),
+      });
+      if (!tRes.ok) { await tRes.text().catch(() => ""); throw new Error(`gateway_${tRes.status}`); }
+      const tArgs = extractToolArguments(await tRes.json());
+      if (!tArgs.ok) throw new Error("parse_failed");
+      const ta = validateTerritoryAssessment(tArgs.value, tctx, payload.text, brandCtxText);
+      territory = { ...ta, territory_snapshot: tctx };
+      log("territory_alignment_completed", { territory_id: tctx.territory_id, territory_alignment_version: ta.territory_alignment_version, score: ta.territory_alignment_score, partial: ta.territory_alignment_partial, discarded_references: ta.discarded_references, duration_ms: Date.now() - t0 });
+    } catch (e) {
+      territoryStatus = "failed";
+      log("territory_alignment_failed", { territory_id: tctx.territory_id, reason: String((e as Error)?.message ?? "").slice(0, 80), duration_ms: Date.now() - t0 });
+    }
+  }
+
   const result = {
     // Legacy flat format (kept for UI/PDF/API compatibility)
     ...r,
@@ -297,6 +344,9 @@ Faça a análise completa usando a função fornecida.`;
     brand_context_status: brandContextStatus,
     empresa_id: brandEmpresaId,
     ...brand,
+    territory_status: territoryStatus,
+    territory_id: territoryData ? territoryData.territory.id : null,
+    ...territory,
     source_meta: {
       ...sourceMeta,
       input_type: inputType,
@@ -340,7 +390,7 @@ Faça a análise completa usando a função fornecida.`;
             const { error: planErr } = await admin.from("plano_de_acao").insert(items);
             if (planErr) log("persist_plan_failed", { code: planErr.code });
           }
-          log("persisted", { analysis_id: saved.id, input_type: inputType, brand_aware: !!result.brand_aware });
+          log("persisted", { analysis_id: saved.id, input_type: inputType, brand_aware: !!result.brand_aware, territory_id: (territory as any).territory_snapshot?.territory_id ?? null });
         }
       }
     } catch (e) { log("persist_failed", { name: (e as Error)?.name, message: String((e as Error)?.message ?? "").slice(0, 200) }); }
@@ -354,6 +404,7 @@ Faça a análise completa usando a função fornecida.`;
       score_version: v2.score_version, content_score: v2.content_score, content_score_partial: v2.content_score_partial,
       score_dimensions: Object.fromEntries(Object.entries(v2.score_dimensions).map(([k, d]) => [k, { score: d.score, source: d.source, available: d.available }])),
       ...brandWebhookFields(result, brandEmpresaId),
+      ...territoryWebhookFields(result),
     }).then(() => log("webhook_dispatched")).catch(() => log("webhook_error"));
   }
 
