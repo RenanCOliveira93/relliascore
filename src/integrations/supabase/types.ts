@@ -74,6 +74,7 @@ export type Database = {
           technical_geo_rules: Json | null
           technical_geo_version: string | null
           technical_signals: Json | null
+          territory_id: string | null
           tipo: string
           user_id: string
           website_url: string | null
@@ -139,6 +140,7 @@ export type Database = {
           technical_geo_rules?: Json | null
           technical_geo_version?: string | null
           technical_signals?: Json | null
+          territory_id?: string | null
           tipo: string
           user_id: string
           website_url?: string | null
@@ -204,6 +206,7 @@ export type Database = {
           technical_geo_rules?: Json | null
           technical_geo_version?: string | null
           technical_signals?: Json | null
+          territory_id?: string | null
           tipo?: string
           user_id?: string
           website_url?: string | null
@@ -223,6 +226,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analises_territory_id_fkey"
+            columns: ["territory_id"]
+            isOneToOne: false
+            referencedRelation: "brand_territories"
             referencedColumns: ["id"]
           },
           {
@@ -1354,6 +1364,208 @@ export type Database = {
           },
         ]
       }
+      brand_territories: {
+        Row: {
+          archived_at: string | null
+          core_concept: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          desired_association: string | null
+          empresa_id: string
+          excluded_topics: string[]
+          id: string
+          included_topics: string[]
+          last_reviewed_brand_brain_id: string | null
+          last_reviewed_brand_brain_version: number | null
+          name: string
+          origin: string
+          priority: string
+          related_concepts: string[]
+          slug: string
+          source_brand_brain_id: string | null
+          source_brand_brain_version: number | null
+          status: string
+          strategic_intent: string | null
+          suggestion_breadth: string | null
+          suggestion_confidence: number | null
+          suggestion_rationale: string | null
+          target_audience_summary: string | null
+          territory_type: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          core_concept?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          desired_association?: string | null
+          empresa_id: string
+          excluded_topics?: string[]
+          id?: string
+          included_topics?: string[]
+          last_reviewed_brand_brain_id?: string | null
+          last_reviewed_brand_brain_version?: number | null
+          name: string
+          origin?: string
+          priority?: string
+          related_concepts?: string[]
+          slug: string
+          source_brand_brain_id?: string | null
+          source_brand_brain_version?: number | null
+          status?: string
+          strategic_intent?: string | null
+          suggestion_breadth?: string | null
+          suggestion_confidence?: number | null
+          suggestion_rationale?: string | null
+          target_audience_summary?: string | null
+          territory_type?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          core_concept?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          desired_association?: string | null
+          empresa_id?: string
+          excluded_topics?: string[]
+          id?: string
+          included_topics?: string[]
+          last_reviewed_brand_brain_id?: string | null
+          last_reviewed_brand_brain_version?: number | null
+          name?: string
+          origin?: string
+          priority?: string
+          related_concepts?: string[]
+          slug?: string
+          source_brand_brain_id?: string | null
+          source_brand_brain_version?: number | null
+          status?: string
+          strategic_intent?: string | null
+          suggestion_breadth?: string | null
+          suggestion_confidence?: number | null
+          suggestion_rationale?: string | null
+          target_audience_summary?: string | null
+          territory_type?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_territories_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_territories_last_reviewed_brand_brain_id_fkey"
+            columns: ["last_reviewed_brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_territories_source_brand_brain_id_fkey"
+            columns: ["source_brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_territories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_territory_relations: {
+        Row: {
+          brand_brain_id: string
+          brand_brain_version: number
+          created_at: string
+          created_by: string
+          empresa_id: string
+          id: string
+          item_id: string
+          item_label: string
+          origin: string
+          relation_kind: string
+          territory_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          brand_brain_id: string
+          brand_brain_version: number
+          created_at?: string
+          created_by: string
+          empresa_id: string
+          id?: string
+          item_id: string
+          item_label: string
+          origin?: string
+          relation_kind: string
+          territory_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          brand_brain_id?: string
+          brand_brain_version?: number
+          created_at?: string
+          created_by?: string
+          empresa_id?: string
+          id?: string
+          item_id?: string
+          item_label?: string
+          origin?: string
+          relation_kind?: string
+          territory_id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_territory_relations_brand_brain_id_fkey"
+            columns: ["brand_brain_id"]
+            isOneToOne: false
+            referencedRelation: "brand_brains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_territory_relations_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_territory_relations_territory_id_fkey"
+            columns: ["territory_id"]
+            isOneToOne: false
+            referencedRelation: "brand_territories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_territory_relations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_visual_identity: {
         Row: {
           accent_colors: Json
@@ -2026,6 +2238,10 @@ export type Database = {
         Returns: undefined
       }
       bb_norm: { Args: { p: string }; Returns: string }
+      bt_set_priority: {
+        Args: { p_priority: string; p_territory: string }
+        Returns: string
+      }
       check_rate_limit: {
         Args: {
           p_endpoint: string

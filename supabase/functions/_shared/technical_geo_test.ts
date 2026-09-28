@@ -183,7 +183,7 @@ Deno.test("persistence: authenticated success row carries Technical GEO; failure
   assertEquals(text.technical_geo_version, null);
 });
 Deno.test("legacy still interpreted as legacy (no recalculation)", () => {
-  assertEquals(scoreVersionOf({ score: 70 }), "legacy");
+  assertEquals(scoreVersionOf({ score: 70 } as { score_version?: unknown }), "legacy");
   const row = buildAnaliseRow({ status: "success", score: 70, sub_scores: {} }, { userId: "u", workspaceId: "w", empresaId: null, origem: "webhook_api", inputType: "webpage", mode: "business", searchQuery: "q", websiteUrl: null })!;
   assertEquals(row.score_version, undefined);
   assertEquals(row.technical_geo_version, undefined);
