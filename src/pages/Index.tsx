@@ -89,8 +89,8 @@ const Index = () => {
   useEffect(() => {
     setRelTerritoryId(null); setRelTerritories([]);
     if (!relEmpresaId) return;
-    supabase.from("brand_territories").select("id,name,priority").eq("empresa_id", relEmpresaId).eq("status", "active").order("priority")
-      .then(({ data }) => setRelTerritories((data ?? []) as { id: string; name: string; priority: string }[]));
+    supabase.from("brand_territories").select("id,name,priority").eq("empresa_id", relEmpresaId).neq("status", "archived")
+      .then(({ data }) => setRelTerritories(((data ?? []) as { id: string; name: string; priority: string }[]).sort((a, b) => ["primary","secondary","exploratory"].indexOf(a.priority) - ["primary","secondary","exploratory"].indexOf(b.priority))));
   }, [relEmpresaId]);
   const { planConfig, canAnalyze, remainingAnalyses, subscription, refreshSubscription } = useSubscription();
 
