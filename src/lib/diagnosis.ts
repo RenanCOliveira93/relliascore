@@ -1,4 +1,5 @@
 import { brandFieldsFromRow } from "./brand-alignment-view";
+import { territoryFieldsFromRow } from "./territory-alignment-view";
 // Pure presentation helpers for the RELLIA Content Score 2.0 diagnosis.
 // They only read persisted/returned analysis data — they never change the score math.
 import {
@@ -324,6 +325,7 @@ export function rowToResult(row: Record<string, any>): AnalysisResult {
     citation_readiness: row.citation_readiness ?? undefined,
     technical_geo: tg,
     ...brandFieldsFromRow(row),
+    ...territoryFieldsFromRow(row),
   };
 }
 

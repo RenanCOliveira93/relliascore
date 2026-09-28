@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import ScoreDisplay from "@/components/ScoreDisplay";
 import { rowToResult } from "@/lib/diagnosis";
 import { historyBadge } from "@/lib/brand-alignment-view";
+import { territoryHistoryBadge } from "@/lib/territory-alignment-view";
 
 interface Empresa {
   id: string;
@@ -181,6 +182,7 @@ const Historico = () => {
                             {a.website_url ? ` · ${a.website_url}` : a.input_type === "text" ? " · Análise de conteúdo (texto)" : ""}
                           </CardDescription>
                           {historyBadge(a) && <p className="text-xs text-muted-foreground mt-1" data-testid="history-brand-badge"><span className="text-success">Brand-aware</span> · {historyBadge(a)!.company ?? "—"} · Brand Alignment {historyBadge(a)!.score ?? "N/D"}</p>}
+                          {territoryHistoryBadge(a) && <p className="text-xs text-muted-foreground mt-1" data-testid="history-territory-badge">Território: <span className="text-foreground/80">{territoryHistoryBadge(a)!.name}</span> · Territory Alignment {territoryHistoryBadge(a)!.score ?? "N/D"}</p>}
                           {a.search_query && <p className="text-xs text-muted-foreground italic mt-1 line-clamp-1">Intenção: "{a.search_query}"</p>}
                         </div>
                       </div>
